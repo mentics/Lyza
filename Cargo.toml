@@ -9,10 +9,11 @@ edition = "2021"
 anyhow = "1.0.69"
 chrono = { version = "0.4.23", features = ["serde","rkyv"] }
 csv = "1.2.1"
+derive_more = "0.99.17"
 fern = "0.6.1"
 lazy_static = "1.4.0"
 log = "0.4.17"
 regex = "1.7.1"
-rkyv = "0.7.40"
+rkyv = { version = "0.7.40", features = ["validation"] }
 serde = { version = "1.0.154", features = ["derive"] }
 walkdir = "2.3.2"

@@ -1,5 +1,4 @@
-mod store;
-mod market;
+use lyza;
 
 fn main() -> Result<(), anyhow::Error> {
     std::fs::create_dir_all("C:/data/log/lyza/")?;
@@ -7,7 +6,7 @@ fn main() -> Result<(), anyhow::Error> {
         .level(log::LevelFilter::Debug)
         .chain(fern::log_file("C:/data/log/lyza/output.log")?).apply()?;
 
-    store::optionsdx::walk();
+    lyza::store::loader::walk();
 
     return Ok(());
 }
