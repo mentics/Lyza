@@ -1,0 +1,4 @@
+REPL:
+evcxr --opt 2
+:dep lyza = { path = "C:/data/rust/lyza/" }
+use lyza::*;

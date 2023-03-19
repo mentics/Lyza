@@ -89,8 +89,7 @@ pub struct OdxRecord<'a> {
     pub strike_distance_pct: String,
 }
 
-pub fn load<F,C>(path: &Path, proc: F, ctx:C) where F: Fn(C, &OdxRecord) -> () {
-    // let mut reader = csv::Reader::from_path(path).expect("Could not open csv");
+pub fn load<F,C>(path: &Path, proc: F, ctx:&mut C) where F: Fn(&mut C, &OdxRecord) -> () {
     let mut reader = csv::ReaderBuilder::new()
         .trim(csv::Trim::All)
         .from_path(path).expect("Couldn't create csv reader");
@@ -121,7 +120,6 @@ pub fn load<F,C>(path: &Path, proc: F, ctx:C) where F: Fn(C, &OdxRecord) -> () {
                 error!("Error reading row: {:?}\n{:?}", err, raw_record);
             },
         }
-        break;
     }
     println!("proced: {}, skipped: {}", count, skipped);
 }

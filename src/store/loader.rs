@@ -1,7 +1,7 @@
 use walkdir::{ WalkDir, DirEntry };
 use std::fs::File;
 use std::io::{prelude::*, BufWriter};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use chrono::prelude::{NaiveDateTime};
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -23,20 +23,21 @@ pub fn walk() {
         optionsdx::load(path, proc, &mut ctx);
         //     proc(&mut ctx, &rec);
         // });
+        break;
     }
 }
 
-pub fn paths_out(year:u16, month:u8) -> (PathBuf, PathBuf, PathBuf) {
-    let path_base = std::path::Path::new(&format!("C:/data/db/lyza/odx-rkyv/{year}{month}/"));
-    return (path_base.join("calls.rkyv"), path_base.join("puts.rkyv"), path_base.join("unders.rkyv"));
+pub fn paths_out(year:u16, month:u8) -> (PathBuf, PathBuf, PathBuf, PathBuf) {
+    let path_base = PathBuf::from(format!("C:/data/db/lyza/odx-rkyv/{year}{month}/"));
+    return (path_base.join("calls.rkyv"), path_base.join("puts.rkyv"), path_base.join("unders.rkyv"), path_base);
 }
 
 fn make_ctx(year:u16, month:u8) -> ProcCtx {
-    let (calls_path, puts_path, unders_path) = paths_out(year, month);
-    std::fs::create_dir_all(calls_path).expect("Could not create output path {path_base}");
-    let calls = File::create(calls_path).expect("Could not create calls file");
-    let puts = File::create(puts_path).expect("Could not create puts file");
-    let unders = File::create(unders_path).expect("Could not create unders file");
+    let (calls_path, puts_path, unders_path, path_base) = paths_out(year, month);
+    std::fs::create_dir_all(&path_base).expect("Could not create output path {path_base}");
+    let calls = File::create(&calls_path).expect("Could not create calls file");
+    let puts = File::create(&puts_path).expect("Could not create puts file");
+    let unders = File::create(&unders_path).expect("Could not create unders file");
     return ProcCtx {
         calls: BufWriter::new(calls),
         puts: BufWriter::new(puts),
@@ -52,9 +53,9 @@ struct ProcCtx {
 
 // fn proc(rec: &OdxRecord) {
 fn proc(ctx: &mut ProcCtx, rec: &optionsdx::OdxRecord) {
-    let ts = NaiveDateTime::from_timestamp_millis (rec.quote_unixtime).unwrap();
+    let ts = NaiveDateTime::from_timestamp_millis (rec.quote_unixtime * 1000).unwrap();
     let under = rec.underlying_last;
-    let xpir = NaiveDateTime::from_timestamp_millis (rec.expire_unix).unwrap().date();
+    let xpir = NaiveDateTime::from_timestamp_millis (rec.expire_unix * 1000).unwrap().date();
     let strike = rec.strike;
 
     let (call_size_bid, call_size_ask) = optionsdx::parse_size(rec.c_size);

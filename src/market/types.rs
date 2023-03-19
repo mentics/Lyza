@@ -14,19 +14,40 @@ pub struct PriceStore(pub f32);
 // #[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
 pub struct PriceExt(pub f32);
 
-pub trait Style {}
+pub trait Style {
+    fn code() -> &'static str;
+}
+// #[derive(Display)]
 pub struct Call;
+#[derive(Display,Debug)]
 pub struct Put;
-impl Style for Call {}
-impl Style for Put {}
+impl Style for Call {
+    fn code() -> &'static str { return "Call" }
+}
+impl Style for Put {
+    fn code() -> &'static str { return "Put" }
+}
 
 pub trait Side {}
+#[derive(Display,Debug)]
 pub struct Long;
+#[derive(Display,Debug)]
 pub struct Short;
 impl Side for Long {}
 impl Side for Short {}
 
-#[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
+impl std::fmt::Debug for Call {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Call")
+    }
+}
+impl std::fmt::Display for Call {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Call")
+    }
+}
+
+#[derive(Archive, Deserialize, Serialize, PartialEq)]
 pub struct Opt<S:Style> {
     pub _style: PhantomData<*const S>,
     pub expir: NaiveDate,
@@ -39,6 +60,16 @@ impl<S:Style> Opt<S> {
             expir: expir,
             strike: strike,
         }
+    }
+}
+impl<S:Style> std::fmt::Display for Opt<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {} {}", S::code(), self.expir, self.strike)
+    }
+}
+impl<S:Style> std::fmt::Debug for Opt<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
     }
 }
 
