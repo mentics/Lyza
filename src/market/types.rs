@@ -1,12 +1,19 @@
-use chrono::prelude::*;
 use std::marker::PhantomData;
 use rkyv::{Archive, Deserialize, Serialize};
 use serde;
-
 use derive_more::{Display, From};
+use crate::general::*;
 
 #[derive(Display, From, Copy, Clone, Archive, Deserialize, Serialize, Debug, PartialEq, serde::Deserialize)]
+// #[derive(num_derive::Float, derive_more::Neg, num_derive::FromPrimitive, num_derive::ToPrimitive, num_derive::NumCast)]
 pub struct PriceCalc(pub f32);
+// impl derive_more::Neg for PriceCalc {
+
+// }
+
+// Encodes missing as NaN
+#[derive(Display, From, Copy, Clone, Archive, Deserialize, Serialize, Debug, PartialEq, serde::Deserialize)]
+pub struct Missing<T>(pub T);
 
 // #[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
 pub struct PriceStore(pub f32);
@@ -50,11 +57,11 @@ impl std::fmt::Display for Call {
 #[derive(Archive, Deserialize, Serialize, PartialEq)]
 pub struct Opt<S:Style> {
     pub _style: PhantomData<*const S>,
-    pub expir: NaiveDate,
+    pub expir: ExpirDate,
     pub strike: PriceCalc,
 }
 impl<S:Style> Opt<S> {
-    pub fn new(expir: NaiveDate, strike: PriceCalc) -> Self {
+    pub fn new(expir: ExpirDate, strike: PriceCalc) -> Self {
         Opt {
             _style: PhantomData,
             expir: expir,
@@ -77,7 +84,7 @@ impl<S:Style> std::fmt::Debug for Opt<S> {
 pub struct Quote {
     pub bid: PriceCalc,
     pub ask: PriceCalc,
-    pub last: PriceCalc,
+    pub last: Missing<PriceCalc>,
     pub size_bid: u32,
     pub size_ask: u32,
 }
@@ -89,7 +96,7 @@ pub struct Meta {
     pub vega: f32,
     pub theta: f32,
     pub rho: f32,
-    pub iv: f32,
+    pub iv: Missing<f32>,
     pub volume: f32,
 }
 

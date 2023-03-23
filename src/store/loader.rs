@@ -1,29 +1,31 @@
+use log::*;
 use walkdir::{ WalkDir, DirEntry };
 use std::fs::File;
 use std::io::{prelude::*, BufWriter};
 use std::path::PathBuf;
-use chrono::prelude::{NaiveDateTime};
 use lazy_static::lazy_static;
 use regex::Regex;
 
-// #[path = "optionsdx.rs"] mod optionsdx;
+use crate::general::*;
 use crate::store::optionsdx;
 use crate::market::types::*;
 
 const BASE_DIR:&str = "C:/data/market/optionsdx";
 
 pub fn walk() {
+    info!("Walking paths");
     let iter = WalkDir::new(BASE_DIR).into_iter().filter_map(valid_path);
     for entry in iter {
         let path = entry.path();
         let name = path.file_name().expect("invalid path").to_str().expect("invalid path encoding");
         let (year, month) = parse_ym(name);
         println!("Processing year {year}, month {month}");
+        info!("Processing year {year}, month {month}");
         let mut ctx = make_ctx(year, month);
         optionsdx::load(path, proc, &mut ctx);
         //     proc(&mut ctx, &rec);
         // });
-        break;
+        // break;
     }
 }
 
@@ -39,6 +41,7 @@ fn make_ctx(year:u16, month:u8) -> ProcCtx {
     let puts = File::create(&puts_path).expect("Could not create puts file");
     let unders = File::create(&unders_path).expect("Could not create unders file");
     return ProcCtx {
+        ts_prev: TS_ZERO,
         calls: BufWriter::new(calls),
         puts: BufWriter::new(puts),
         unders: BufWriter::new(unders),
@@ -46,6 +49,7 @@ fn make_ctx(year:u16, month:u8) -> ProcCtx {
 }
 
 struct ProcCtx {
+    ts_prev: Timestamp,
     calls: BufWriter<File>,
     puts: BufWriter<File>,
     unders: BufWriter<File>,
@@ -53,32 +57,41 @@ struct ProcCtx {
 
 // fn proc(rec: &OdxRecord) {
 fn proc(ctx: &mut ProcCtx, rec: &optionsdx::OdxRecord) {
-    let ts = NaiveDateTime::from_timestamp_millis (rec.quote_unixtime * 1000).unwrap();
+    let ts = Timestamp::from_timestamp_millis (rec.quote_unixtime * 1000).unwrap();
     let under = rec.underlying_last;
-    let xpir = NaiveDateTime::from_timestamp_millis (rec.expire_unix * 1000).unwrap().date();
-    let strike = rec.strike;
+    let xpir = Timestamp::from_timestamp_millis (rec.expire_unix * 1000).unwrap().date();
+    let strike = PriceCalc(rec.strike);
 
-    let (call_size_bid, call_size_ask) = optionsdx::parse_size(rec.c_size);
-    let call_opt: Opt<Call> = Opt::new(xpir, strike);
-    let call_meta = Meta { delta:rec.c_delta, gamma:rec.c_gamma, vega:rec.c_vega, theta:rec.c_theta, rho:rec.c_rho, iv:rec.c_iv, volume:rec.c_volume };
-    let call_quote = Quote { bid:rec.c_bid, ask:rec.c_ask, last:rec.c_last, size_bid:call_size_bid, size_ask:call_size_ask };
-    let call_optquote: OptQuote<Call> = OptQuote { opt:call_opt, meta:call_meta, quote:call_quote };
-    let call_to_write = (ts, call_optquote);
-    let call_bytes = rkyv::to_bytes::<_, 256>(&call_to_write).unwrap();
-    ctx.calls.write(&call_bytes).expect("Could not write write");
+    // TODO: greeks should probably use Missing because they can be NaN
 
-    let (put_size_bid, put_size_ask) = optionsdx::parse_size(rec.p_size);
-    let put_opt: Opt<Call> = Opt::new(xpir, strike);
-    let put_meta = Meta { delta:rec.p_delta, gamma:rec.p_gamma, vega:rec.p_vega, theta:rec.p_theta, rho:rec.p_rho, iv:rec.p_iv, volume:rec.p_volume };
-    let put_quote = Quote { bid:rec.p_bid, ask:rec.p_ask, last:rec.p_last, size_bid:put_size_bid, size_ask:put_size_ask };
-    let put_optquote: OptQuote<Call> = OptQuote { opt:put_opt, meta:put_meta, quote:put_quote };
-    let put_to_write = (ts, put_optquote);
-    let put_bytes = rkyv::to_bytes::<_, 256>(&put_to_write).unwrap();
-    ctx.puts.write(&put_bytes).expect("Could not write put");
+    if let (Some(c_bid), Some(c_ask)) = (rec.c_bid, rec.c_ask) {
+        let (call_size_bid, call_size_ask) = optionsdx::parse_size(rec.c_size);
+        let call_opt: Opt<Call> = Opt::new(xpir, strike);
+        let call_meta = Meta { delta:rec.c_delta, gamma:rec.c_gamma, vega:rec.c_vega, theta:rec.c_theta, rho:rec.c_rho, iv:Missing(rec.c_iv), volume:rec.c_volume };
+        let call_quote = Quote { bid:PriceCalc(c_bid), ask:PriceCalc(c_ask), last:Missing(PriceCalc(rec.c_last)), size_bid:call_size_bid, size_ask:call_size_ask };
+        let call_optquote: OptQuote<Call> = OptQuote { opt:call_opt, meta:call_meta, quote:call_quote };
+        let call_to_write = (ts, call_optquote);
+        let call_bytes = rkyv::to_bytes::<_, 256>(&call_to_write).unwrap();
+        ctx.calls.write(&call_bytes).expect("Could not write write");
+    }
 
-    let under_to_write = (ts, under);
-    let under_bytes = rkyv::to_bytes::<_, 256>(&under_to_write).unwrap();
-    ctx.unders.write(&under_bytes).expect("Could not write under");
+    if let (Some(p_bid), Some(p_ask)) = (rec.p_bid, rec.p_ask) {
+        let (put_size_bid, put_size_ask) = optionsdx::parse_size(rec.p_size);
+        let put_opt: Opt<Call> = Opt::new(xpir, strike);
+        let put_meta = Meta { delta:rec.p_delta, gamma:rec.p_gamma, vega:rec.p_vega, theta:rec.p_theta, rho:rec.p_rho, iv:Missing(rec.p_iv), volume:rec.p_volume };
+        let put_quote = Quote { bid:PriceCalc(p_bid), ask:PriceCalc(p_ask), last:Missing(PriceCalc(rec.p_last)), size_bid:put_size_bid, size_ask:put_size_ask };
+        let put_optquote: OptQuote<Call> = OptQuote { opt:put_opt, meta:put_meta, quote:put_quote };
+        let put_to_write = (ts, put_optquote);
+        let put_bytes = rkyv::to_bytes::<_, 256>(&put_to_write).unwrap();
+        ctx.puts.write(&put_bytes).expect("Could not write put");
+    }
+
+    if ts != ctx.ts_prev {
+        let under_to_write = (ts, under);
+        let under_bytes = rkyv::to_bytes::<_, 256>(&under_to_write).unwrap();
+        ctx.unders.write(&under_bytes).expect("Could not write under");
+        ctx.ts_prev = ts;
+    }
 }
 
 lazy_static! {

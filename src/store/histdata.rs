@@ -1,22 +1,22 @@
-use chrono::NaiveDateTime;
 use std::fs::File;
 use std::io::{BufReader, Read, ErrorKind};
 use std::path::PathBuf;
+use crate::general::*;
 use crate::market::types::*;
 use crate::store::loader;
 use rkyv::{self, Deserialize, Archive};
 
 #[derive(Debug)]
 pub struct HistData {
-    // tss: Vec<NaiveDateTime>,
-    pub calls: Vec<(NaiveDateTime,OptQuote<Call>)>,
-    pub puts: Vec<(NaiveDateTime,OptQuote<Put>)>,
-    pub unders: Vec<(NaiveDateTime,PriceCalc)>,
+    tss: Vec<Timestamp>,
+    pub calls: Vec<(Timestamp,OptQuote<Call>)>,
+    pub puts: Vec<(Timestamp,OptQuote<Put>)>,
+    pub unders: Vec<(Timestamp,PriceCalc)>,
 }
 
-type UnderType = (NaiveDateTime, PriceCalc);
-type CallType = (NaiveDateTime, OptQuote<Call>);
-type PutType = (NaiveDateTime, OptQuote<Put>);
+type UnderType = (Timestamp, PriceCalc);
+type CallType = (Timestamp, OptQuote<Call>);
+type PutType = (Timestamp, OptQuote<Put>);
 
 const UNDER_SIZE: usize = std::mem::size_of::<UnderType>();
 const OPT_SIZE: usize = std::mem::size_of::<CallType>();
@@ -30,14 +30,9 @@ pub fn load_all(year:u16, month:u8) -> HistData {
     let mut opt_buf = [0_u8; OPT_SIZE];
     let calls_v = load::<CallType,OPT_SIZE>(&calls_path, &mut opt_buf);
     let puts_v = load::<PutType,OPT_SIZE>(&puts_path, &mut opt_buf);
-    // let tss_v = Vec::with_capacity(unders_v.len());
-
-    // let arch = unsafe { rkyv::archived_root::<CallType>(&opt_buf[..]) };
-    // let one: CallType = arch.deserialize(&mut rkyv::Infallible).expect("Could not rkyv deserialize object");
-    // calls_v.push(one);
 
     return HistData {
-        // tss: tss,
+        tss: Vec::new(),
         calls: calls_v,
         puts: puts_v,
         unders: unders_v,

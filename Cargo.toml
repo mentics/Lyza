@@ -13,6 +13,10 @@ derive_more = "0.99.17"
 fern = "0.6.1"
 lazy_static = "1.4.0"
 log = "0.4.17"
+num-derive = "0.3.3"
+num-traits = "0.2.15"
+# num-traits = { version = "0.2.15", features = ["std"] }
+# { version = "0.4.0", features = ["num-traits", "num-derive"] }
 regex = "1.7.1"
 rkyv = { version = "0.7.40", features = ["validation"] }
 serde = { version = "1.0.154", features = ["derive"] }
