@@ -1,25 +1,36 @@
 use std::marker::PhantomData;
 use rkyv::{Archive, Deserialize, Serialize};
-use serde;
-use derive_more::{Display, From};
+// use serde;
+use derive_more::Display;
 use crate::general::*;
 
-#[derive(Display, From, Copy, Clone, Archive, Deserialize, Serialize, Debug, PartialEq, serde::Deserialize)]
+// #[derive(Display, From, Copy, Clone, Ord, Archive, Deserialize, Serialize, Debug, PartialEq, serde::Deserialize)]
 // #[derive(num_derive::Float, derive_more::Neg, num_derive::FromPrimitive, num_derive::ToPrimitive, num_derive::NumCast)]
-pub struct PriceCalc(pub f32);
-// impl derive_more::Neg for PriceCalc {
-
-// }
+// pub struct PriceCalc(pub f32);
+pub type PriceCalc = f32;
 
 // Encodes missing as NaN
-#[derive(Display, From, Copy, Clone, Archive, Deserialize, Serialize, Debug, PartialEq, serde::Deserialize)]
-pub struct Missing<T>(pub T);
+// #[derive(Display, From, Copy, Clone, Archive, Deserialize, Serialize, Debug, PartialEq, serde::Deserialize)]
+// pub struct Missing<T>(pub T);
 
 // #[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
-pub struct PriceStore(pub f32);
+// pub struct PriceStore(pub f32);
+pub type PriceStore = f32;
 
 // #[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
-pub struct PriceExt(pub f32);
+// pub struct PriceExt(pub f32);
+pub type PriceExt = f32;
+
+pub type Tennies = i32; // Tenths of pennies
+pub type StrikeType = Tennies;
+// pub struct StrikeType(Tennies);
+
+fn to_tennies(p:PriceCalc) -> Tennies {
+    (p * 1000.0) as Tennies
+}
+fn from_tennies(p:Tennies) -> PriceCalc {
+    (p as PriceCalc) / 1000.0
+}
 
 pub trait Style {
     fn code() -> &'static str;
@@ -84,7 +95,7 @@ impl<S:Style> std::fmt::Debug for Opt<S> {
 pub struct Quote {
     pub bid: PriceCalc,
     pub ask: PriceCalc,
-    pub last: Missing<PriceCalc>,
+    pub last: PriceCalc, // Missing as NaN
     pub size_bid: u32,
     pub size_ask: u32,
 }
@@ -96,7 +107,7 @@ pub struct Meta {
     pub vega: f32,
     pub theta: f32,
     pub rho: f32,
-    pub iv: Missing<f32>,
+    pub iv: f32, // Missing as NaN
     pub volume: f32,
 }
 

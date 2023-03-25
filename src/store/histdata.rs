@@ -13,6 +13,10 @@ pub struct HistData {
     pub puts: Vec<(Timestamp,OptQuote<Put>)>,
     pub unders: Vec<(Timestamp,PriceCalc)>,
 }
+// fn make_chall(hd:HistData) -> ChainsAll {
+//     let chats = HashMap::new()
+//     ChainsAll(chats)
+// }
 
 type UnderType = (Timestamp, PriceCalc);
 type CallType = (Timestamp, OptQuote<Call>);
