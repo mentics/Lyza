@@ -9,7 +9,7 @@ use crate::market::chaintypes::ChainsAll;
 
 #[derive(Debug)]
 pub struct HistData {
-    tss: Vec<Timestamp>,
+    pub tss: Vec<Timestamp>,
     pub calls: Vec<(Timestamp,OptQuote<Call>)>,
     pub puts: Vec<(Timestamp,OptQuote<Put>)>,
     pub unders: Vec<(Timestamp,PriceCalc)>,

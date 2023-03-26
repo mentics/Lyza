@@ -105,7 +105,7 @@ impl<S:Style> std::fmt::Debug for Opt<S> {
     }
 }
 
-#[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Copy, Clone, Archive, Deserialize, Serialize, Debug, PartialEq)]
 pub struct Quote {
     pub bid: PriceCalc,
     pub ask: PriceCalc,
