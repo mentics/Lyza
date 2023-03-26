@@ -25,14 +25,14 @@ pub type Tennies = i32; // Tenths of pennies
 pub type StrikeType = Tennies;
 // pub struct StrikeType(Tennies);
 
-fn to_tennies(p:PriceCalc) -> Tennies {
-    (p * 1000.0) as Tennies
+pub fn to_strike(p:PriceCalc) -> StrikeType {
+    (p * 1000.0) as StrikeType
 }
-fn from_tennies(p:Tennies) -> PriceCalc {
-    (p as PriceCalc) / 1000.0
+pub fn from_strike(s:StrikeType) -> PriceCalc {
+    (s as PriceCalc) / 1000.0
 }
 
-pub trait Style {
+pub trait Style: Switch {
     fn code() -> &'static str;
 }
 // #[derive(Display)]
@@ -44,6 +44,20 @@ impl Style for Call {
 }
 impl Style for Put {
     fn code() -> &'static str { return "Put" }
+}
+
+pub trait Switch {
+    fn switch<T>(a:T, b:T) -> T;
+}
+impl Switch for Call {
+    fn switch<T>(a:T, _:T) -> T {
+        return a;
+    }
+}
+impl Switch for Put {
+    fn switch<T>(_:T, b:T) -> T {
+        return b;
+    }
 }
 
 pub trait Side {}

@@ -2,3 +2,14 @@ REPL:
 evcxr --opt 2
 :dep lyza = { path = "C:/data/rust/lyza/" }
 use lyza::*;
+
+
+
+fn main() -> Box<HistData> {
+  let hd201601 = store::histdata::load_all(2016, 1);
+  return Box::new(hd201601);
+}
+
+
+  let chall201601: market::chaintypes::ChainsAll = store::histdata::make_chall(&hd201601);
+  return Box::new(chall201601);

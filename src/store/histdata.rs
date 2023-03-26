@@ -1,10 +1,11 @@
 use std::fs::File;
 use std::io::{BufReader, Read, ErrorKind};
 use std::path::PathBuf;
+use rkyv::{self, Deserialize, Archive};
 use crate::general::*;
 use crate::market::types::*;
 use crate::store::loader;
-use rkyv::{self, Deserialize, Archive};
+use crate::market::chaintypes::ChainsAll;
 
 #[derive(Debug)]
 pub struct HistData {
@@ -13,10 +14,10 @@ pub struct HistData {
     pub puts: Vec<(Timestamp,OptQuote<Put>)>,
     pub unders: Vec<(Timestamp,PriceCalc)>,
 }
-// fn make_chall(hd:HistData) -> ChainsAll {
-//     let chats = HashMap::new()
-//     ChainsAll(chats)
-// }
+
+pub fn make_chall(hd:&HistData) -> ChainsAll {
+    return ChainsAll::new(&hd.calls, &hd.puts);
+}
 
 type UnderType = (Timestamp, PriceCalc);
 type CallType = (Timestamp, OptQuote<Call>);
