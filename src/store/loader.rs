@@ -9,12 +9,11 @@ use regex::Regex;
 use crate::general::*;
 use crate::store::optionsdx;
 use crate::market::types::*;
-
-const BASE_DIR:&str = "C:/data/market/optionsdx";
+use crate::store::paths::*;
 
 pub fn walk() {
     info!("Walking paths");
-    let iter = WalkDir::new(BASE_DIR).into_iter().filter_map(valid_path);
+    let iter = WalkDir::new(PATH_ODX).into_iter().filter_map(valid_path);
     for entry in iter {
         let path = entry.path();
         let name = path.file_name().expect("invalid path").to_str().expect("invalid path encoding");
@@ -25,12 +24,12 @@ pub fn walk() {
         optionsdx::load(path, proc, &mut ctx);
         //     proc(&mut ctx, &rec);
         // });
-        // break;
+        break;
     }
 }
 
 pub fn paths_out(year:u16, month:u8) -> (PathBuf, PathBuf, PathBuf, PathBuf) {
-    let path_base = PathBuf::from(format!("C:/data/db/lyza/odx-rkyv/{year}{month}/"));
+    let path_base = PathBuf::from(format!("{PATH_RKYV}{year}{month}/"));
     return (path_base.join("calls.rkyv"), path_base.join("puts.rkyv"), path_base.join("unders.rkyv"), path_base);
 }
 
@@ -57,9 +56,9 @@ struct ProcCtx {
 
 // fn proc(rec: &OdxRecord) {
 fn proc(ctx: &mut ProcCtx, rec: &optionsdx::OdxRecord) {
-    let ts = Timestamp::from_timestamp_millis (rec.quote_unixtime * 1000).unwrap();
+    let ts = Timestamp (rec.quote_unixtime * 1000);
     let under = rec.underlying_last;
-    let xpir = Timestamp::from_timestamp_millis (rec.expire_unix * 1000).unwrap().date();
+    let xpir = ExpirDate::from_naive(chrono::naive::NaiveDateTime::from_timestamp_millis(rec.expire_unix * 1000).unwrap().date());
     // let strike = PriceCalc(rec.strike);
     let strike = rec.strike;
 

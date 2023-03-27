@@ -27,3 +27,29 @@ pub fn setup_logging() -> Result<(),anyhow::Error> {
         .apply()?;
     return Ok(());
 }
+
+
+// use chrono::naive::NaiveDate;
+// use std::collections::BTreeMap;
+// use rkyv::{Archive, Deserialize, Serialize, with::{AsString, Inline}};
+
+// #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Eq)]
+// // #[archive_attr(derive(Debug, PartialEq))]
+// pub struct NewDate(#[with(Inline)] NaiveDate);
+
+// impl Ord for NewDate {
+//     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+//         self.0.cmp(&other.0)
+//     }
+// }
+// impl PartialOrd for NewDate {
+//     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+//         self.0.partial_cmp(&other.0)
+//     }
+// }
+
+// #[derive(Archive, Deserialize, Serialize)]
+// pub struct TestStruct {
+//     chats: BTreeMap<NewDate,u64>,
+// }
+

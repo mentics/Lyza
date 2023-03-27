@@ -1,27 +1,34 @@
 use std::collections::{HashMap, BTreeMap};
+use rkyv::{Archive, Deserialize, Serialize};
+
 use crate::general::*;
 use crate::market::types::*;
 
-trait Chall {
-    type R;
-    fn at(&self, ts:Timestamp) -> Option<&Self::R>;
+pub trait Chall {
+    type R:Chat;
+    fn at(&self, ts:&Timestamp) -> Option<&Self::R>;
+    fn run_all(&self, f:fn(&Timestamp, &Self::R) -> ()) {
+        self.run(|x| true, f)
+    }
+    fn run(&self, pred:fn(&Timestamp) -> bool, f:fn(&Timestamp, &Self::R) -> ());
 }
 
-trait Chat {
-    type R;
+pub trait Chat {
+    type R:Chex;
     fn expir(&self, xpir:ExpirDate) -> Option<&Self::R>;
 }
 
-trait Chex {
+pub trait Chex {
     fn quote<S:Style>(&self, strike:PriceCalc) -> Option<&Quote>;
 }
 
+#[derive(Archive, Deserialize, Serialize)]
 pub struct ChainsAll {
-    chats: HashMap<Timestamp,ChainAt>,
+    chats: BTreeMap<Timestamp,ChainAt>,
 }
 impl ChainsAll {
     pub fn new(calls: &Vec<(Timestamp,OptQuote<Call>)>, puts: &Vec<(Timestamp,OptQuote<Put>)>) -> ChainsAll {
-        let chats: HashMap<Timestamp,ChainAt> = HashMap::new();
+        let chats: BTreeMap<Timestamp,ChainAt> = BTreeMap::new();
         let mut chall = ChainsAll { chats: chats };
         for (ts, call) in calls {
             chall.add(*ts, call);
@@ -35,27 +42,38 @@ impl ChainsAll {
         let chat = self.chats.entry(ts).or_insert_with(|| ChainAt::new());
         chat.add(oq);
     }
-    // fn addPut(ts:Timestamp, oq:OptQuote<Call>) {
-    //     let chat = chats.entry(ts).or_insert_with(|| ChainAt::new());
-    //     chat.add(oq);
-    // }
     pub fn lup<S:Style>(&self, ts:Timestamp, xpir:ExpirDate, strike:PriceCalc) -> Option<&Quote> {
         return self.chats.get(&ts)?.expir(xpir)?.quote::<S>(strike);
     }
 }
+
 impl Chall for ChainsAll {
     type R = ChainAt;
-    fn at(&self, ts:Timestamp) -> Option<&Self::R> {
+    fn at(&self, ts:&Timestamp) -> Option<&Self::R> {
         self.chats.get(&ts)
+    }
+
+    fn run<'a>(&'a self, pred:Pred1<&'a Timestamp>, f:fn(&'a Timestamp, &'a Self::R) -> ()) {
+        let mut i = 0;
+        for (ts, val) in self.chats.iter() {
+            if pred(ts) {
+                f(ts, val);
+            }
+            i += 1;
+            if i > 10 {
+                break;
+            }
+        }
     }
 }
 
+#[derive(Archive, Deserialize, Serialize)]
 pub struct ChainAt {
-    chexs: HashMap<ExpirDate,ChainStyles>,
+    chexs: BTreeMap<ExpirDate,ChainStyles>,
 }
 impl ChainAt {
     pub fn new() -> ChainAt {
-        let chexs: HashMap<ExpirDate,ChainStyles> = HashMap::new();
+        let chexs: BTreeMap<ExpirDate,ChainStyles> = BTreeMap::new();
         let chat = ChainAt { chexs: chexs };
         return chat;
     }
@@ -72,9 +90,10 @@ impl Chat for ChainAt {
     }
 }
 
+#[derive(Archive, Deserialize, Serialize, Debug)]
 pub struct ChainStyles {
-    calls: BTreeMap<StrikeType,Quote>,
-    puts: BTreeMap<StrikeType,Quote>,
+    pub calls: BTreeMap<StrikeType,Quote>,
+    pub puts: BTreeMap<StrikeType,Quote>,
 }
 impl ChainStyles {
     fn new() -> ChainStyles {

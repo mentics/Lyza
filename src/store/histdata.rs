@@ -1,11 +1,12 @@
 use std::fs::File;
-use std::io::{BufReader, Read, ErrorKind};
+use std::io::{BufReader, Read, ErrorKind, Write};
 use std::path::PathBuf;
-use rkyv::{self, Deserialize, Archive};
+use rkyv::{Deserialize, Serialize, Archive};
 use crate::general::*;
 use crate::market::types::*;
 use crate::store::loader;
 use crate::market::chaintypes::ChainsAll;
+use crate::store::paths::PATH_DB;
 
 #[derive(Debug)]
 pub struct HistData {
@@ -18,6 +19,12 @@ pub struct HistData {
 pub fn make_chall(hd:&HistData) -> ChainsAll {
     return ChainsAll::new(&hd.calls, &hd.puts);
 }
+
+// pub fn save_chall(chall:&ChainsAll) {
+//     let path = format!("{PATH_DB}chall.rkyv");
+//     let bytes = rkyv::to_bytes(&chall).expect("Could not serialize chall");
+//     File::create(path).unwrap_or_else(|e| panic!("Could not create {path} err: {e}")).write_all(&bytes);
+// }
 
 type UnderType = (Timestamp, PriceCalc);
 type CallType = (Timestamp, OptQuote<Call>);
