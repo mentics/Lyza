@@ -32,21 +32,21 @@ pub struct OdxRecord<'a> {
     #[serde(rename = "[DTE]")]
     pub dte: String,
 
-    #[serde(rename = "[C_DELTA]", deserialize_with = "blank_to_NaN")]
+    #[serde(rename = "[C_DELTA]", deserialize_with = "blank_to_nan")]
     pub c_delta: f32,
-    #[serde(rename = "[C_GAMMA]", deserialize_with = "blank_to_NaN")]
+    #[serde(rename = "[C_GAMMA]", deserialize_with = "blank_to_nan")]
     pub c_gamma: f32,
-    #[serde(rename = "[C_VEGA]", deserialize_with = "blank_to_NaN")]
+    #[serde(rename = "[C_VEGA]", deserialize_with = "blank_to_nan")]
     pub c_vega: f32,
-    #[serde(rename = "[C_THETA]", deserialize_with = "blank_to_NaN")]
+    #[serde(rename = "[C_THETA]", deserialize_with = "blank_to_nan")]
     pub c_theta: f32,
-    #[serde(rename = "[C_RHO]", deserialize_with = "blank_to_NaN")]
+    #[serde(rename = "[C_RHO]", deserialize_with = "blank_to_nan")]
     pub c_rho: f32,
-    #[serde(rename = "[C_IV]", deserialize_with = "blank_to_NaN")]
+    #[serde(rename = "[C_IV]", deserialize_with = "blank_to_nan")]
     pub c_iv: f32,
     #[serde(rename = "[C_VOLUME]", deserialize_with = "blank_to_0")]
     pub c_volume: f32,
-    #[serde(rename = "[C_LAST]", deserialize_with = "blank_to_NaN")]
+    #[serde(rename = "[C_LAST]", deserialize_with = "blank_to_nan")]
     pub c_last: f32,
     #[serde(rename = "[C_SIZE]")]
     pub c_size: &'a str,
@@ -64,19 +64,19 @@ pub struct OdxRecord<'a> {
     pub p_ask: Option<f32>,
     #[serde(rename = "[P_SIZE]")]
     pub p_size: &'a str,
-    #[serde(rename = "[P_LAST]", deserialize_with = "blank_to_NaN")]
+    #[serde(rename = "[P_LAST]", deserialize_with = "blank_to_nan")]
     pub p_last: f32,
-    #[serde(rename = "[P_DELTA]", deserialize_with = "blank_to_NaN")]
+    #[serde(rename = "[P_DELTA]", deserialize_with = "blank_to_nan")]
     pub p_delta: f32,
-    #[serde(rename = "[P_GAMMA]", deserialize_with = "blank_to_NaN")]
+    #[serde(rename = "[P_GAMMA]", deserialize_with = "blank_to_nan")]
     pub p_gamma: f32,
-    #[serde(rename = "[P_VEGA]", deserialize_with = "blank_to_NaN")]
+    #[serde(rename = "[P_VEGA]", deserialize_with = "blank_to_nan")]
     pub p_vega: f32,
-    #[serde(rename = "[P_THETA]", deserialize_with = "blank_to_NaN")]
+    #[serde(rename = "[P_THETA]", deserialize_with = "blank_to_nan")]
     pub p_theta: f32,
-    #[serde(rename = "[P_RHO]", deserialize_with = "blank_to_NaN")]
+    #[serde(rename = "[P_RHO]", deserialize_with = "blank_to_nan")]
     pub p_rho: f32,
-    #[serde(rename = "[P_IV]", deserialize_with = "blank_to_NaN")]
+    #[serde(rename = "[P_IV]", deserialize_with = "blank_to_nan")]
     pub p_iv: f32,
     #[serde(rename = "[P_VOLUME]", deserialize_with = "blank_to_0")]
     pub p_volume: f32,
@@ -122,7 +122,7 @@ pub fn load<F,C>(path: &Path, proc: F, ctx:&mut C) where F: Fn(&mut C, &OdxRecor
     println!("proced: {}, skipped: {}", count, skipped);
 }
 
-fn blank_to_NaN<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+fn blank_to_nan<'de, D, T>(deserializer: D) -> Result<T, D::Error>
         where D: serde::Deserializer<'de>,
               T: FromStr + Float,
               <T as FromStr>::Err: Display {

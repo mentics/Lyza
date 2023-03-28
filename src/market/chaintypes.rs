@@ -1,4 +1,4 @@
-use std::collections::{HashMap, BTreeMap};
+use std::collections::BTreeMap;
 use rkyv::{Archive, Deserialize, Serialize};
 
 use crate::general::*;
@@ -8,23 +8,23 @@ pub trait Chall {
     type R:Chat;
     fn at(&self, ts:&Timestamp) -> Option<&Self::R>;
     fn run_all(&self, f:fn(&Timestamp, &Self::R) -> ()) {
-        self.run(|x| true, f)
+        self.run(|_| true, f)
     }
     fn run(&self, pred:fn(&Timestamp) -> bool, f:fn(&Timestamp, &Self::R) -> ());
 }
 
 pub trait Chat {
     type R:Chex;
-    fn expir(&self, xpir:ExpirDate) -> Option<&Self::R>;
+    fn expir(&self, xpir:&ExpirDate) -> Option<&Self::R>;
 }
 
 pub trait Chex {
-    fn quote<S:Style>(&self, strike:PriceCalc) -> Option<&Quote>;
+    fn quote<S:Style>(&self, strike:&PriceCalc) -> Option<&Quote>;
 }
 
 #[derive(Archive, Deserialize, Serialize)]
 pub struct ChainsAll {
-    chats: BTreeMap<Timestamp,ChainAt>,
+    pub chats: BTreeMap<Timestamp,ChainAt>,
 }
 impl ChainsAll {
     pub fn new(calls: &Vec<(Timestamp,OptQuote<Call>)>, puts: &Vec<(Timestamp,OptQuote<Put>)>) -> ChainsAll {
@@ -42,7 +42,7 @@ impl ChainsAll {
         let chat = self.chats.entry(ts).or_insert_with(|| ChainAt::new());
         chat.add(oq);
     }
-    pub fn lup<S:Style>(&self, ts:Timestamp, xpir:ExpirDate, strike:PriceCalc) -> Option<&Quote> {
+    pub fn lup<S:Style>(&self, ts:&Timestamp, xpir:&ExpirDate, strike:&PriceCalc) -> Option<&Quote> {
         return self.chats.get(&ts)?.expir(xpir)?.quote::<S>(strike);
     }
 }
@@ -69,7 +69,7 @@ impl Chall for ChainsAll {
 
 #[derive(Archive, Deserialize, Serialize)]
 pub struct ChainAt {
-    chexs: BTreeMap<ExpirDate,ChainStyles>,
+    pub chexs: BTreeMap<ExpirDate,ChainStyles>,
 }
 impl ChainAt {
     pub fn new() -> ChainAt {
@@ -85,7 +85,7 @@ impl ChainAt {
 }
 impl Chat for ChainAt {
     type R = ChainStyles;
-    fn expir(&self, xpir:ExpirDate) -> Option<&Self::R> {
+    fn expir(&self, xpir:&ExpirDate) -> Option<&Self::R> {
         self.chexs.get(&xpir)
     }
 }
@@ -109,10 +109,10 @@ impl ChainStyles {
     }
 }
 impl Chex for ChainStyles {
-    fn quote<S:Style>(&self, strike:PriceCalc) -> Option<&Quote> {
+    fn quote<S:Style>(&self, strike:&PriceCalc) -> Option<&Quote> {
         let c = S::switch(&self.calls, &self.puts);
         // TODO: is that really the way to do it?
-        return c.get(&to_strike(strike));
+        return c.get(&to_strike(*strike));
     }
     // fn quoteCall(&'a self, strike:StrikeType) -> Option<&'a Quote> {
     //     self.calls.get(&strike)

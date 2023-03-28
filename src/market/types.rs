@@ -105,16 +105,22 @@ impl<S:Style> std::fmt::Debug for Opt<S> {
     }
 }
 
-#[derive(Copy, Clone, Archive, Deserialize, Serialize, Debug, PartialEq)]
-pub struct Quote {
+#[derive(Copy, Clone, Archive, Deserialize, Serialize, Debug)]
+pub struct BidAsk {
     pub bid: PriceCalc,
     pub ask: PriceCalc,
+}
+
+#[derive(Copy, Clone, Archive, Deserialize, Serialize, Debug)]
+pub struct Quote {
+    pub bisk: BidAsk,
     pub last: PriceCalc, // Missing as NaN
     pub size_bid: u32,
     pub size_ask: u32,
+    pub meta: Meta,
 }
 
-#[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Copy, Clone, Archive, Deserialize, Serialize, Debug)]
 pub struct Meta {
     pub delta: f32,
     pub gamma: f32,
@@ -125,9 +131,9 @@ pub struct Meta {
     pub volume: f32,
 }
 
-#[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Archive, Deserialize, Serialize, Debug)]
 pub struct OptQuote<S:Style> {
     pub opt: Opt<S>,
-    pub meta: Meta,
+    // pub meta: Meta,
     pub quote: Quote,
 }

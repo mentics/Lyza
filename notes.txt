@@ -7,10 +7,14 @@ use general::*;
 use market::types::*;
 use market::chaintypes::*;
 
-let hd201601 = store::histdata::load_all(2016, 1);
-let ts0:Timestamp = hd201601.unders[0].0;
-let xpir0:ExpirDate = hd201601.calls[0].1.opt.expir;
-let chall201601:ChainsAll = store::histdata::make_chall(&hd201601);
-let strikes:Vec<StrikeType> = chall201601.at(ts0).unwrap().expir(xpir0).unwrap().calls.keys().map(|x| *x).collect();
+store::loader::walk();
 
+// let hd201601 = store::histdata::load_month(2016, 1);
+let hdall = store::histdata::load_all();
+let chall:ChainsAll = store::histdata::make_chall(&hdall);
+store::histdata::save_chall(&chall, "all");
+
+let ts0:Timestamp = hdall.unders[0].0;
+let xpir0:ExpirDate = hdall.calls[0].1.opt.expir;
+let strikes:Vec<StrikeType> = chall.at(&ts0).unwrap().expir(&xpir0).unwrap().calls.keys().map(|x| *x).collect();
 

@@ -22,8 +22,6 @@ pub fn walk() {
         info!("Processing year {year}, month {month}");
         let mut ctx = make_ctx(year, month);
         optionsdx::load(path, proc, &mut ctx);
-        //     proc(&mut ctx, &rec);
-        // });
         break;
     }
 }
@@ -68,8 +66,8 @@ fn proc(ctx: &mut ProcCtx, rec: &optionsdx::OdxRecord) {
         let (call_size_bid, call_size_ask) = optionsdx::parse_size(rec.c_size);
         let call_opt: Opt<Call> = Opt::new(xpir, strike);
         let call_meta = Meta { delta:rec.c_delta, gamma:rec.c_gamma, vega:rec.c_vega, theta:rec.c_theta, rho:rec.c_rho, iv:rec.c_iv, volume:rec.c_volume };
-        let call_quote = Quote { bid:c_bid, ask:c_ask, last:rec.c_last, size_bid:call_size_bid, size_ask:call_size_ask };
-        let call_optquote: OptQuote<Call> = OptQuote { opt:call_opt, meta:call_meta, quote:call_quote };
+        let call_quote = Quote { bisk:BidAsk { bid:c_bid, ask:c_ask }, last:rec.c_last, size_bid:call_size_bid, size_ask:call_size_ask, meta:call_meta };
+        let call_optquote: OptQuote<Call> = OptQuote { opt:call_opt, quote:call_quote };
         let call_to_write = (ts, call_optquote);
         let call_bytes = rkyv::to_bytes::<_, 256>(&call_to_write).unwrap();
         ctx.calls.write(&call_bytes).expect("Could not write write");
@@ -79,8 +77,8 @@ fn proc(ctx: &mut ProcCtx, rec: &optionsdx::OdxRecord) {
         let (put_size_bid, put_size_ask) = optionsdx::parse_size(rec.p_size);
         let put_opt: Opt<Call> = Opt::new(xpir, strike);
         let put_meta = Meta { delta:rec.p_delta, gamma:rec.p_gamma, vega:rec.p_vega, theta:rec.p_theta, rho:rec.p_rho, iv:rec.p_iv, volume:rec.p_volume };
-        let put_quote = Quote { bid:p_bid, ask:p_ask, last:rec.p_last, size_bid:put_size_bid, size_ask:put_size_ask };
-        let put_optquote: OptQuote<Call> = OptQuote { opt:put_opt, meta:put_meta, quote:put_quote };
+        let put_quote = Quote { bisk:BidAsk { bid:p_bid, ask:p_ask }, last:rec.p_last, size_bid:put_size_bid, size_ask:put_size_ask, meta:put_meta };
+        let put_optquote: OptQuote<Call> = OptQuote { opt:put_opt, quote:put_quote };
         let put_to_write = (ts, put_optquote);
         let put_bytes = rkyv::to_bytes::<_, 256>(&put_to_write).unwrap();
         ctx.puts.write(&put_bytes).expect("Could not write put");
