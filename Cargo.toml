@@ -29,7 +29,9 @@ rand = "0.8.5"
 # num-traits = { version = "0.2.15", features = ["std"] }
 # { version = "0.4.0", features = ["num-traits", "num-derive"] }
 regex = "1.7.1"
-rkyv = { version = "0.7.40", features = ["validation"] }
 serde = { version = "1.0.154", features = ["derive"] }
 speedy = "0.8.6"
 walkdir = "2.3.2"
+
+# [patch.crates-io]
+# speedy = { path = "C:/data/rust/deps/speedy" }

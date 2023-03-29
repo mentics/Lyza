@@ -1,8 +1,8 @@
 use regex::Regex;
+use speedy::{Writable, Readable, LittleEndian};
 use std::fs::File;
-use std::io::{BufReader, Read, ErrorKind, Write};
+use std::io::{BufReader, Read, ErrorKind};
 use std::path::PathBuf;
-use rkyv::{Deserialize, Archive};
 use lazy_static::lazy_static;
 use crate::general::*;
 use crate::market::types::*;
@@ -10,7 +10,6 @@ use crate::store::loader;
 use crate::market::chaintypes::ChainsAll;
 use crate::store::paths::{PATH_DB, PATH_RKYV};
 
-#[derive(Debug)]
 pub struct HistData {
     pub calls: Vec<(Timestamp,OptQuote<Call>)>,
     pub puts: Vec<(Timestamp,OptQuote<Put>)>,
@@ -23,26 +22,27 @@ pub fn make_chall(hd:&HistData) -> ChainsAll {
 
 pub fn save_chall(chall:&ChainsAll, suffix: &str) {
     let path = path_chall(suffix);
-    let mut file = File::create(&path)
-        .unwrap_or_else(|err| panic!("Could not create {path} err: {err}"));
-    let bytes = rkyv::to_bytes::<_,256>(chall)
-        .unwrap_or_else(|err|panic!("Could not serialize chall err: {err}"));
-    file.write_all(&bytes).unwrap_or_else(|e| panic!("Could not write chall to {path} err: {e}"));
+    // let file = File::create(&path)
+    //     .unwrap_or_else(|err| panic!("Could not create {path} err: {err}"));
+    // chall.write_to_stream(file);
+    chall.write_to_file(path).expect("Couldn't write chall");
 }
 
 pub fn load_chall(suffix: &str) -> ChainsAll {
     let path = path_chall(suffix);
     let file = File::open(&path)
         .unwrap_or_else(|err| panic!("Could not open chall {path} err: {err}"));
-    let len = file.metadata().unwrap().len().try_into().unwrap();
-    let mut reader = BufReader::new(file);
-    let mut buf: Vec<u8> = Vec::with_capacity(len);
-    reader.read_to_end(&mut buf)
-        .unwrap_or_else(|err| panic!("Could not read chall {path} err: {err}"));
-    let arch = unsafe { rkyv::archived_root::<ChainsAll>(&buf) };
-    let chall = arch.deserialize(&mut rkyv::Infallible)
-        .unwrap_or_else(|err| panic!("Could not deserialize chall {path} err: {err}"));
-    return chall;
+    return ChainsAll::read_from_stream_buffered(file).unwrap();
+
+    // let len = file.metadata().unwrap().len().try_into().unwrap();
+    // let mut reader = BufReader::new(file);
+    // let mut buf: Vec<u8> = Vec::with_capacity(len);
+    // reader.read_to_end(&mut buf)
+    //     .unwrap_or_else(|err| panic!("Could not read chall {path} err: {err}"));
+    // let arch = unsafe { rkyv::archived_root::<ChainsAll>(&buf) };
+    // let chall = arch.deserialize(&mut rkyv::Infallible)
+    //     .unwrap_or_else(|err| panic!("Could not deserialize chall {path} err: {err}"));
+    // return chall;
 }
 
 fn path_chall(suffix:&str) -> String {
@@ -57,7 +57,7 @@ const UNDER_SIZE: usize = std::mem::size_of::<UnderType>();
 const OPT_SIZE: usize = std::mem::size_of::<CallType>();
 
 lazy_static! {
-    static ref RE_RKYV: Regex = Regex::new(r"(\d{4})(\d{1,2})").unwrap();
+    static ref RE_RKYV: Regex = Regex::new(r"(\d{4})-(\d{2})").unwrap();
 }
 
 fn parse_rkyv_ym(s: &str) -> (u16, u8) {
@@ -120,38 +120,82 @@ pub fn load_month(year:u16, month:u8) -> HistData {
     };
 }
 
+// impl<'a,C:Context,T:Readable<'a,C>> Readable<'a,C> for PhantomData<T> {
+//     fn read_from< R:Reader<'a,C>>(reader:&mut R) -> Result<Self, C::Error> {
+//         let is_call = reader.read_value();
+//         if is_call {
+//             return Ok(PhantomData::<Call>());
+//         } else {
+//             return Ok(PhantomData::<Put>());
+//         }
+//     }
+
+//     #[inline]
+//     fn minimum_bytes_needed() -> usize {
+//         1
+//     }
+// }
+
 pub fn load_paths(
             unders_v:&mut Vec<UnderType>, calls_v:&mut Vec<CallType>, puts_v:&mut Vec<PutType>,
             calls_path:&PathBuf, puts_path:&PathBuf, unders_path:&PathBuf) {
-    let mut unders_buf = [0_u8; UNDER_SIZE];
-    load::<UnderType,UNDER_SIZE>(unders_v, &unders_path, &mut unders_buf);
-
-    let mut opt_buf = [0_u8; OPT_SIZE];
-    load::<CallType,OPT_SIZE>(calls_v, &calls_path, &mut opt_buf);
-    load::<PutType,OPT_SIZE>(puts_v, &puts_path, &mut opt_buf);
+    let mut buf = [0u8; UNDER_SIZE];
+    load::<UnderType,UNDER_SIZE>(unders_v, &unders_path, &mut buf);
+    let mut buf_opt = [0u8; OPT_SIZE];
+    load::<CallType,OPT_SIZE>(calls_v, &calls_path, &mut buf_opt);
+    load::<PutType,OPT_SIZE>(puts_v, &puts_path, &mut buf_opt);
 }
 
-fn load<T,const N: usize>(v:&mut Vec<T>, path: &PathBuf, buf: &mut[u8; N])
-        where T: Archive, rkyv::Archived<T>: Deserialize<T,rkyv::Infallible> {
-    let mut reader = BufReader::new(File::open(path).unwrap());
-
+fn load<'a, T:Readable<'a,LittleEndian>+std::fmt::Debug, const N: usize>(
+            v:&mut Vec<T>, path: &PathBuf, buf:&mut [u8; N]) {
+    let file = File::open(path).unwrap();
+    let mut reader = BufReader::new(file);
+    // let mut buf = [0u8; UNDER_SIZE];
     loop {
+        // let len = T::minimum_bytes_needed();
         match reader.read_exact(buf) {
-            Ok(_) => {
-                let arch = unsafe { rkyv::archived_root::<T>(buf) };
-                let one: T = arch.deserialize(&mut rkyv::Infallible).unwrap();
-                v.push(one);
+            Ok(()) => {
+                let x = T::read_from_buffer_copying_data(buf).expect("couldn't deserialize");
+                v.push(x);
             },
-            Err(e) => match e.kind() {
-                ErrorKind::UnexpectedEof => break,
-                _ => panic!("Error deserializing: {:?}", e)
-            }
-        };
+            Err(err) => match err.kind() {
+                    ErrorKind::UnexpectedEof => break,
+                    _ => panic!("Error deserializing histdata: {:?}", err)
+                }
+        }
+        // // match T::read_from_stream_unbuffered(&file) {
+        // match T::read_from_buffer_copying_data(&buf) {
+        //     Ok(o) => {
+        //         // println!("Pushing to unders: {:?} {:?}", o, file);
+        //         v.push(o);
+        //     },
+        //     Err(err) => {
+        //         println!("Reached err {err}");
+        //         if err.is_eof() { break } else { panic!("Error deserializing histdata: {:?}", err) }
+        //     }
+        //     // match err {
+        //     //     ErrorKind::UnexpectedEof => break,
+        //     //     _ => panic!("Error deserializing histdata: {:?}", err)
+        //     // }
+        // }
     }
 }
 
-// fn load1<T,const N: usize>(buf: &mut[u8; N]) -> T where T: Archive, rkyv::Archived<T>: Deserialize<T,rkyv::Infallible> {
-//     let arch = unsafe { rkyv::archived_root::<T>(buf) };
-//     let one = arch.deserialize(&mut rkyv::Infallible).unwrap();
-//     return one;
+// fn load<T,const N: usize>(v:&mut Vec<T>, path: &PathBuf, buf: &mut[u8; N])
+//         where T: Archive, rkyv::Archived<T>: Deserialize<T,rkyv::Infallible> {
+//     let mut reader = BufReader::new(File::open(path).unwrap());
+
+//     loop {
+//         match reader.read_exact(buf) {
+//             Ok(_) => {
+//                 let arch = unsafe { rkyv::archived_root::<T>(buf) };
+//                 let one: T = arch.deserialize(&mut rkyv::Infallible).unwrap();
+//                 v.push(one);
+//             },
+//             Err(e) => match e.kind() {
+//                 ErrorKind::UnexpectedEof => break,
+//                 _ => panic!("Error deserializing: {:?}", e)
+//             }
+//         };
+//     }
 // }

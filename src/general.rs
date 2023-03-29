@@ -1,15 +1,14 @@
 // use std::ops::Deref;
 use std::fmt;
 use chrono::prelude::{NaiveDate};
-use rkyv::{Archive, Deserialize, Serialize};
+use speedy::{Readable, Writable};
 use std::mem::transmute;
 
 type NaiveDateInternal = i32;
 
 pub type Pred1<T> = fn(T) -> bool;
 
-#[derive(Archive, Deserialize, Serialize, Eq, PartialEq, Ord, PartialOrd, Copy, Clone)]
-#[archive_attr(derive(Eq, PartialEq, Ord, PartialOrd))]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Readable, Writable)]
 pub struct Timestamp(pub i64);
 
 impl fmt::Display for Timestamp {
@@ -32,8 +31,7 @@ impl fmt::Debug for Timestamp {
 //     }
 // }
 
-#[derive(Archive, Deserialize, Serialize, Eq, PartialEq, Ord, PartialOrd, Copy, Clone)]
-#[archive_attr(derive(Eq, PartialEq, Ord, PartialOrd))]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Readable, Writable)]
 pub struct ExpirDate(pub i32);
 impl ExpirDate {
     pub fn from_millis(millis:i64) -> Self {

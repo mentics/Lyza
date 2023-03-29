@@ -1,8 +1,7 @@
 use std::marker::PhantomData;
-use rkyv::{Archive, Deserialize, Serialize};
-// use serde;
-use derive_more::Display;
+use speedy::{Readable, Writable, Context, Writer, Reader};
 use crate::general::*;
+use crate::macros::enum_type;
 
 // #[derive(Display, From, Copy, Clone, Ord, Archive, Deserialize, Serialize, Debug, PartialEq, serde::Deserialize)]
 // #[derive(num_derive::Float, derive_more::Neg, num_derive::FromPrimitive, num_derive::ToPrimitive, num_derive::NumCast)]
@@ -32,18 +31,16 @@ pub fn from_strike(s:StrikeType) -> PriceCalc {
     (s as PriceCalc) / 1000.0
 }
 
-pub trait Style: Switch {
-    fn code() -> &'static str;
-}
-// #[derive(Display)]
-pub struct Call;
-#[derive(Display,Debug)]
-pub struct Put;
-impl Style for Call {
-    fn code() -> &'static str { return "Call" }
-}
-impl Style for Put {
-    fn code() -> &'static str { return "Put" }
+enum_type! {
+    Style:Switch {
+        fn code() -> char;
+    }
+    Call {
+        fn code() -> char { 'c' }
+    }
+    Put {
+        fn code() -> char { 'p' }
+    }
 }
 
 pub trait Switch {
@@ -61,25 +58,14 @@ impl Switch for Put {
 }
 
 pub trait Side {}
-#[derive(Display,Debug)]
+#[derive(Readable,Writable)]
 pub struct Long;
-#[derive(Display,Debug)]
+#[derive(Readable,Writable)]
 pub struct Short;
 impl Side for Long {}
 impl Side for Short {}
 
-impl std::fmt::Debug for Call {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Call")
-    }
-}
-impl std::fmt::Display for Call {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Call")
-    }
-}
-
-#[derive(Archive, Deserialize, Serialize, PartialEq)]
+// #[derive(Readable, Writable)]
 pub struct Opt<S:Style> {
     pub _style: PhantomData<*const S>,
     pub expir: ExpirDate,
@@ -105,13 +91,113 @@ impl<S:Style> std::fmt::Debug for Opt<S> {
     }
 }
 
-#[derive(Copy, Clone, Archive, Deserialize, Serialize, Debug)]
+impl<C:Context> Writable<C> for Opt<Call> {
+    #[inline]
+    fn write_to<W:?Sized+Writer<C>>(&self, writer:&mut W) -> Result<(),C::Error> {
+        // Call::code().write_to(writer)?;
+        self.expir.write_to(writer)?;
+        self.strike.write_to(writer)?;
+        return Ok(());
+    }
+
+    #[inline]
+    fn bytes_needed(&self) -> Result<usize, C::Error> {
+        // TODO
+        Ok(1 + 4 + 4)
+        // Ok(1 + ExpirDate::minimum_bytes_needed() + PriceCalc::minimum_bytes_needed())
+    }
+}
+
+impl<C:Context> Writable<C> for Opt<Put> {
+    #[inline]
+    fn write_to<W:?Sized+Writer<C>>(&self, writer:&mut W) -> Result<(),C::Error> {
+        // Put::code().write_to(writer)?;
+        self.expir.write_to(writer)?;
+        self.strike.write_to(writer)?;
+        return Ok(());
+    }
+
+    #[inline]
+    fn bytes_needed(&self) -> Result<usize, C::Error> {
+        // TODO
+        Ok(4 + 4)
+        // Ok(1 + ExpirDate::minimum_bytes_needed() + PriceCalc::minimum_bytes_needed())
+    }
+}
+
+// TODO
+// impl<C:Context, S:Style+Writable<C>> Writable<C> for Opt<S> {
+//     #[inline]
+//     fn write_to<W:?Sized+Writer<C>>(&self, writer:&mut W) -> Result<(),C::Error> {
+//         S::code().write_to(writer);
+//         self.expir.write_to(writer)?;
+//         self.strike.write_to(writer)?;
+//         return Ok(());
+//     }
+
+//     #[inline]
+//     fn bytes_needed(&self) -> Result<usize, C::Error> {
+//         // TODO
+//         Ok(1 + 4 + 4)
+//         // Ok(1 + ExpirDate::minimum_bytes_needed() + PriceCalc::minimum_bytes_needed())
+//     }
+// }
+
+impl<'a,C:Context> Readable<'a,C> for Opt<Call> {
+    #[inline]
+    fn read_from<R:Reader<'a,C>>(reader:&mut R) -> Result<Self,C::Error> {
+        // let code = reader.read_value()?;
+        let xpir = reader.read_value()?;
+        let strike = reader.read_value()?;
+        Ok(Opt::new(xpir, strike))
+    }
+
+    #[inline]
+    fn minimum_bytes_needed() -> usize {
+        // TODO
+        4 + 4
+    }
+}
+
+impl<'a,C:Context> Readable<'a,C> for Opt<Put> {
+    #[inline]
+    fn read_from<R:Reader<'a,C>>(reader:&mut R) -> Result<Self,C::Error> {
+        // let code = reader.read_value()?;
+        let xpir = reader.read_value()?;
+        let strike = reader.read_value()?;
+        Ok(Opt::new(xpir, strike))
+    }
+
+    #[inline]
+    fn minimum_bytes_needed() -> usize {
+        // TODO
+        4 + 4
+    }
+}
+
+// impl<'a,C:Context, S:Style+Readable<'a,C>> Readable<'a,C> for Opt<S> {
+//     #[inline]
+//     fn read_from<R:Reader<'a,C>>(reader:&mut R) -> Result<Self,C::Error> {
+//         // let code = reader.read_value()?;
+//         let xpir = reader.read_value()?;
+//         let strike = reader.read_value()?;
+//         Ok(Opt::new(xpir, strike))
+//     }
+
+//     #[inline]
+//     fn minimum_bytes_needed() -> usize {
+//         // TODO
+//         1 + 4 + 4
+//     }
+// }
+
+#[derive(Copy, Clone, Readable, Writable, Debug)]
 pub struct BidAsk {
     pub bid: PriceCalc,
     pub ask: PriceCalc,
 }
 
-#[derive(Copy, Clone, Archive, Deserialize, Serialize, Debug)]
+#[derive(Copy, Clone, Readable, Writable, Debug)]
 pub struct Quote {
     pub bisk: BidAsk,
     pub last: PriceCalc, // Missing as NaN
@@ -120,7 +206,7 @@ pub struct Quote {
     pub meta: Meta,
 }
 
-#[derive(Copy, Clone, Archive, Deserialize, Serialize, Debug)]
+#[derive(Copy, Clone, Readable, Writable, Debug)]
 pub struct Meta {
     pub delta: f32,
     pub gamma: f32,
@@ -131,7 +217,7 @@ pub struct Meta {
     pub volume: f32,
 }
 
-#[derive(Archive, Deserialize, Serialize, Debug)]
+#[derive(Readable, Writable, Debug)]
 pub struct OptQuote<S:Style> {
     pub opt: Opt<S>,
     // pub meta: Meta,

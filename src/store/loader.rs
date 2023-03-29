@@ -1,10 +1,11 @@
 use log::*;
 use walkdir::{ WalkDir, DirEntry };
 use std::fs::File;
-use std::io::{prelude::*, BufWriter};
+use std::io::BufWriter;
 use std::path::PathBuf;
 use lazy_static::lazy_static;
 use regex::Regex;
+use speedy::Writable;
 
 use crate::general::*;
 use crate::store::optionsdx;
@@ -22,12 +23,12 @@ pub fn walk() {
         info!("Processing year {year}, month {month}");
         let mut ctx = make_ctx(year, month);
         optionsdx::load(path, proc, &mut ctx);
-        break;
+        // break;
     }
 }
 
 pub fn paths_out(year:u16, month:u8) -> (PathBuf, PathBuf, PathBuf, PathBuf) {
-    let path_base = PathBuf::from(format!("{PATH_RKYV}{year}{month}/"));
+    let path_base = PathBuf::from(format!("{PATH_RKYV}{:04}-{:02}/", year, month));
     return (path_base.join("calls.rkyv"), path_base.join("puts.rkyv"), path_base.join("unders.rkyv"), path_base);
 }
 
@@ -69,8 +70,7 @@ fn proc(ctx: &mut ProcCtx, rec: &optionsdx::OdxRecord) {
         let call_quote = Quote { bisk:BidAsk { bid:c_bid, ask:c_ask }, last:rec.c_last, size_bid:call_size_bid, size_ask:call_size_ask, meta:call_meta };
         let call_optquote: OptQuote<Call> = OptQuote { opt:call_opt, quote:call_quote };
         let call_to_write = (ts, call_optquote);
-        let call_bytes = rkyv::to_bytes::<_, 256>(&call_to_write).unwrap();
-        ctx.calls.write(&call_bytes).expect("Could not write write");
+        call_to_write.write_to_stream(&mut ctx.calls).unwrap();
     }
 
     if let (Some(p_bid), Some(p_ask)) = (rec.p_bid, rec.p_ask) {
@@ -80,14 +80,13 @@ fn proc(ctx: &mut ProcCtx, rec: &optionsdx::OdxRecord) {
         let put_quote = Quote { bisk:BidAsk { bid:p_bid, ask:p_ask }, last:rec.p_last, size_bid:put_size_bid, size_ask:put_size_ask, meta:put_meta };
         let put_optquote: OptQuote<Call> = OptQuote { opt:put_opt, quote:put_quote };
         let put_to_write = (ts, put_optquote);
-        let put_bytes = rkyv::to_bytes::<_, 256>(&put_to_write).unwrap();
-        ctx.puts.write(&put_bytes).expect("Could not write put");
+        put_to_write.write_to_stream(&mut ctx.puts).unwrap();
     }
 
     if ts != ctx.ts_prev {
         let under_to_write = (ts, under);
-        let under_bytes = rkyv::to_bytes::<_, 256>(&under_to_write).unwrap();
-        ctx.unders.write(&under_bytes).expect("Could not write under");
+        under_to_write.write_to_stream(&mut ctx.unders).unwrap();
+        // println!("{}{}", ts, ctx.ts_prev);
         ctx.ts_prev = ts;
     }
 }

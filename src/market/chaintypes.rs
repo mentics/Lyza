@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use rkyv::{Archive, Deserialize, Serialize};
+use speedy::{Readable, Writable};
 
 use crate::general::*;
 use crate::market::types::*;
@@ -22,7 +22,7 @@ pub trait Chex {
     fn quote<S:Style>(&self, strike:&PriceCalc) -> Option<&Quote>;
 }
 
-#[derive(Archive, Deserialize, Serialize)]
+#[derive(Readable, Writable)]
 pub struct ChainsAll {
     pub chats: BTreeMap<Timestamp,ChainAt>,
 }
@@ -67,7 +67,7 @@ impl Chall for ChainsAll {
     }
 }
 
-#[derive(Archive, Deserialize, Serialize)]
+#[derive(Readable, Writable)]
 pub struct ChainAt {
     pub chexs: BTreeMap<ExpirDate,ChainStyles>,
 }
@@ -90,7 +90,7 @@ impl Chat for ChainAt {
     }
 }
 
-#[derive(Archive, Deserialize, Serialize, Debug)]
+#[derive(Readable, Writable)]
 pub struct ChainStyles {
     pub calls: BTreeMap<StrikeType,Quote>,
     pub puts: BTreeMap<StrikeType,Quote>,

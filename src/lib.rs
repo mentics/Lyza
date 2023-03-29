@@ -2,6 +2,7 @@ pub mod store;
 pub mod market;
 pub mod backtest;
 pub mod general;
+mod macros;
 
 pub fn setup_logging() -> Result<(),anyhow::Error> {
     std::fs::create_dir_all("C:/data/log/lyza/")?;
