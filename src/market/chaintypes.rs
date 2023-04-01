@@ -1,16 +1,19 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, btree_map};
+use std::ops::Range;
 use speedy::{Readable, Writable};
 
-use crate::general::*;
+use crate::general::{*, self};
 use crate::market::types::*;
 
 pub trait Chall {
     type R:Chat;
+    fn tss_all(&self) -> btree_map::Keys<'_, general::Timestamp, ChainAt>;
     fn at(&self, ts:&Timestamp) -> Option<&Self::R>;
     fn run_all(&self, f:fn(&Timestamp, &Self::R) -> ()) {
         self.run(|_| true, f)
     }
     fn run(&self, pred:fn(&Timestamp) -> bool, f:fn(&Timestamp, &Self::R) -> ());
+    fn run_range(&self, rang:Range<Timestamp>, f:fn(&Timestamp, &Self::R) -> ());
 }
 
 pub trait Chat {
@@ -49,6 +52,11 @@ impl ChainsAll {
 
 impl Chall for ChainsAll {
     type R = ChainAt;
+
+    fn tss_all(&self) -> btree_map::Keys<'_, general::Timestamp, ChainAt> {
+        self.chats.keys()
+    }
+
     fn at(&self, ts:&Timestamp) -> Option<&Self::R> {
         self.chats.get(&ts)
     }
@@ -64,6 +72,10 @@ impl Chall for ChainsAll {
                 break;
             }
         }
+    }
+
+    fn run_range(&self, rang:Range<Timestamp>, f:fn(&Timestamp, &Self::R) -> ()) {
+        self.chats.range(rang).for_each(|(ts,val)| f(ts, val));
     }
 }
 

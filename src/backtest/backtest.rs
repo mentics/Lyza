@@ -1,8 +1,10 @@
+use std::ops::Range;
+
 use crate::general::*;
 use crate::market::chaintypes::{Chall, Chat};
 
-pub fn backtest<T:Chall>(chall:&T) {
-    chall.run_all(handle_ts);
+pub fn backtest<T:Chall>(chall:&T, rang:&Range<Timestamp>) {
+    chall.run_range(rang.clone(), handle_ts);
 }
 
 fn handle_ts<T:Chat>(ts:&Timestamp, _chat:&T) {

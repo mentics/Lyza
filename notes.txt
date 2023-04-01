@@ -6,6 +6,7 @@ use lyza::*;
 use general::*;
 use market::types::*;
 use market::chaintypes::*;
+use std::ops::Range;
 
 store::loader::walk();
 
@@ -14,7 +15,28 @@ let hdall = store::histdata::load_all();
 let chall:ChainsAll = store::histdata::make_chall(&hdall);
 store::histdata::save_chall(&chall, "all");
 
+
+let chall:ChainsAll = store::histdata::load_chall("all");
+let start = NaiveDate::from_ymd_opt(2019, 1, 1).unwrap();
+let stop = NaiveDate::from_ymd_opt(2022, 10, 1).unwrap();
+let rang = start..stop;
+
+// let range_small = (NaiveDate::from_ymd_opt(2022, 1, 1).unwrap())..(NaiveDate::from_ymd_opt(2022, 2, 1).unwrap());
+let range_sm:Range<Timestamp> = (Timestamp::from_ymd(2022, 1, 1))..(Timestamp::from_ymd(2022, 2, 1));
+
+backtest::backtest::backtest(&chall, &range_sm)
+
+
+
+
+
+
+
+
+
+
+////////////////////
+
 let ts0:Timestamp = hdall.unders[0].0;
 let xpir0:ExpirDate = hdall.calls[0].1.opt.expir;
 let strikes:Vec<StrikeType> = chall.at(&ts0).unwrap().expir(&xpir0).unwrap().calls.keys().map(|x| *x).collect();
-

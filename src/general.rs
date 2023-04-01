@@ -1,6 +1,6 @@
 // use std::ops::Deref;
 use std::fmt;
-use chrono::prelude::{NaiveDate};
+use chrono::{prelude::{NaiveDate}, NaiveTime, NaiveDateTime};
 use speedy::{Readable, Writable};
 use std::mem::transmute;
 
@@ -11,9 +11,18 @@ pub type Pred1<T> = fn(T) -> bool;
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Readable, Writable)]
 pub struct Timestamp(pub i64);
 
+impl Timestamp {
+    pub fn from_naivedate(nd:NaiveDate) -> Self {
+        Self(NaiveDateTime::new(nd, NaiveTime::default()).timestamp_millis())
+    }
+    pub fn from_ymd(year: i32, month: u32, day: u32) -> Self {
+        Self(NaiveDateTime::new(NaiveDate::from_ymd_opt(year, month, day).unwrap(), NaiveTime::default()).timestamp_millis())
+    }
+}
+
 impl fmt::Display for Timestamp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let millis = chrono::naive::NaiveDateTime::from_timestamp_millis(self.0).unwrap();
+        let millis = NaiveDateTime::from_timestamp_millis(self.0).unwrap();
         write!(f, "{}", millis)
     }
 }
@@ -35,7 +44,7 @@ impl fmt::Debug for Timestamp {
 pub struct ExpirDate(pub i32);
 impl ExpirDate {
     pub fn from_millis(millis:i64) -> Self {
-        Self::from_naive(chrono::naive::NaiveDateTime::from_timestamp_millis(millis).unwrap().date())
+        Self::from_naive(NaiveDateTime::from_timestamp_millis(millis).unwrap().date())
     }
 
     pub fn from_naive(d:NaiveDate) -> Self {
