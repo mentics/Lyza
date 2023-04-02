@@ -1,3 +1,6 @@
+TODO:
+optionsdx: store bid and ask for underlying
+
 REPL:
 evcxr --opt 2
 
@@ -7,13 +10,14 @@ use general::*;
 use market::types::*;
 use market::chaintypes::*;
 use std::ops::Range;
+use backtest::backtest::backtest;
 
 let chall:ChainsAll = store::histdata::load_chall("all");
 
 let range_m1:Range<Timestamp> = (Timestamp::from_ymd(2022, 1, 1))..(Timestamp::from_ymd(2022, 2, 1));
 let range_y4:Range<Timestamp> = (Timestamp::from_ymd(2019, 1, 1))..(Timestamp::from_ymd(2022, 10, 1));
 
-backtest::backtest::backtest(&chall, &range_m1)
+backtest(&chall, &range_m1);
 
 
 

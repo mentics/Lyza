@@ -17,7 +17,7 @@ pub struct HistData {
 }
 
 pub fn make_chall(hd:&HistData) -> ChainsAll {
-    return ChainsAll::new(&hd.calls, &hd.puts);
+    return ChainsAll::new(&hd.unders, &hd.calls, &hd.puts);
 }
 
 pub fn save_chall(chall:&ChainsAll, suffix: &str) {

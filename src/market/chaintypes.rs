@@ -19,10 +19,11 @@ pub trait Chall {
 pub trait Chat {
     type R:Chex;
     fn expir(&self, xpir:&ExpirDate) -> Option<&Self::R>;
+    fn under(&self) -> PriceCalc;
 }
 
 pub trait Chex {
-    fn quote<S:Style>(&self, strike:&PriceCalc) -> Option<&Quote>;
+    fn quote<S:Style>(&self, strike:&PriceCalc) -> Option<&QuoteOption>;
 }
 
 #[derive(Readable, Writable)]
@@ -30,22 +31,40 @@ pub struct ChainsAll {
     pub chats: BTreeMap<Timestamp,ChainAt>,
 }
 impl ChainsAll {
-    pub fn new(calls: &Vec<(Timestamp,OptQuote<Call>)>, puts: &Vec<(Timestamp,OptQuote<Put>)>) -> ChainsAll {
+    pub fn new(unders: &Vec<(Timestamp,PriceCalc)>, calls: &Vec<(Timestamp,OptQuote<Call>)>, puts: &Vec<(Timestamp,OptQuote<Put>)>) -> ChainsAll {
         let chats: BTreeMap<Timestamp,ChainAt> = BTreeMap::new();
         let mut chall = ChainsAll { chats: chats };
-        for (ts, call) in calls {
-            chall.add(*ts, call);
+        for (ts, under) in unders {
+            chall.chats.insert(*ts, ChainAt::new(*under));
         }
-        for (ts, put) in puts {
-            chall.add(*ts, put);
+
+        let mut ts_prev = calls.first().unwrap().0;
+        let mut chat = chall.chats.get_mut(&ts_prev).unwrap();
+        for (ts, oq) in calls {
+            if *ts != ts_prev {
+                ts_prev = *ts;
+                chat = chall.chats.get_mut(&ts_prev).unwrap();
+            }
+            chat.add(oq);
         }
+
+        ts_prev = puts.first().unwrap().0;
+        chat = chall.chats.get_mut(&ts_prev).unwrap();
+        for (ts, oq) in puts {
+            if *ts != ts_prev {
+                ts_prev = *ts;
+                chat = chall.chats.get_mut(&ts_prev).unwrap();
+            }
+            chat.add(oq);
+        }
+
         return chall;
     }
-    fn add<S:Style>(&mut self, ts:Timestamp, oq:&OptQuote<S>) {
-        let chat = self.chats.entry(ts).or_insert_with(|| ChainAt::new());
-        chat.add(oq);
-    }
-    pub fn lup<S:Style>(&self, ts:&Timestamp, xpir:&ExpirDate, strike:&PriceCalc) -> Option<&Quote> {
+    // fn add<S:Style>(&mut self, ts:Timestamp, oq:&OptQuote<S>) {
+    //     let chat = self.chats.entry(ts).or_insert_with(|| ChainAt::new());
+    //     chat.add(oq);
+    // }
+    pub fn lup<S:Style>(&self, ts:&Timestamp, xpir:&ExpirDate, strike:&PriceCalc) -> Option<&QuoteOption> {
         return self.chats.get(&ts)?.expir(xpir)?.quote::<S>(strike);
     }
 }
@@ -81,12 +100,13 @@ impl Chall for ChainsAll {
 
 #[derive(Readable, Writable)]
 pub struct ChainAt {
+    pub under: PriceCalc,
     pub chexs: BTreeMap<ExpirDate,ChainStyles>,
 }
 impl ChainAt {
-    pub fn new() -> ChainAt {
+    pub fn new(under: PriceCalc) -> ChainAt {
         let chexs: BTreeMap<ExpirDate,ChainStyles> = BTreeMap::new();
-        let chat = ChainAt { chexs: chexs };
+        let chat = ChainAt { under: under, chexs: chexs };
         return chat;
     }
     fn add<S:Style>(&mut self, oq:&OptQuote<S>) {
@@ -97,6 +117,9 @@ impl ChainAt {
 }
 impl Chat for ChainAt {
     type R = ChainStyles;
+    fn under(&self) -> PriceCalc {
+        self.under
+    }
     fn expir(&self, xpir:&ExpirDate) -> Option<&Self::R> {
         self.chexs.get(&xpir)
     }
@@ -104,8 +127,8 @@ impl Chat for ChainAt {
 
 #[derive(Readable, Writable)]
 pub struct ChainStyles {
-    pub calls: BTreeMap<StrikeType,Quote>,
-    pub puts: BTreeMap<StrikeType,Quote>,
+    pub calls: BTreeMap<StrikeType,QuoteOption>,
+    pub puts: BTreeMap<StrikeType,QuoteOption>,
 }
 impl ChainStyles {
     fn new() -> ChainStyles {
@@ -121,7 +144,7 @@ impl ChainStyles {
     }
 }
 impl Chex for ChainStyles {
-    fn quote<S:Style>(&self, strike:&PriceCalc) -> Option<&Quote> {
+    fn quote<S:Style>(&self, strike:&PriceCalc) -> Option<&QuoteOption> {
         let c = S::switch(&self.calls, &self.puts);
         // TODO: is that really the way to do it?
         return c.get(&to_strike(*strike));

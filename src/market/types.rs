@@ -241,6 +241,11 @@ pub struct Quote {
     pub last: PriceCalc, // Missing as NaN
     pub size_bid: u32,
     pub size_ask: u32,
+}
+
+#[derive(Copy, Clone, Readable, Writable, Debug)]
+pub struct QuoteOption {
+    pub quote: Quote,
     pub meta: Meta,
 }
 
@@ -258,6 +263,5 @@ pub struct Meta {
 #[derive(Readable, Writable, Debug)]
 pub struct OptQuote<S:Style> {
     pub opt: Opt<S>,
-    // pub meta: Meta,
-    pub quote: Quote,
+    pub quote: QuoteOption,
 }
