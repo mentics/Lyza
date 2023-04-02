@@ -117,7 +117,7 @@ impl ChainStyles {
 
     fn add<S:Style>(&mut self, oq: &OptQuote<S>) {
         let c = S::switch(&mut self.calls, &mut self.puts);
-        c.insert(to_strike(oq.opt.strike), oq.quote);
+        c.insert(oq.opt.strike, oq.quote);
     }
 }
 impl Chex for ChainStyles {

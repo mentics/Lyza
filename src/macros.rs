@@ -1,9 +1,18 @@
+// use paste::paste;
+
 macro_rules! enum_type {
     { $t:ident $(: $st:path)? { $($tblock:item)* } $($s:ident { $($sblock:item)* })+ } => {
         pub trait $t $(: $st)? {
             fn name() -> &'static str;
             $($tblock)*
         }
+
+        paste::paste! {
+            pub enum [<$t Enum>] < $( [<$s T>], )* > {
+                $($s([<$s T>]),)*
+            }
+        }
+
         $(pub struct $s {}
         // impl $s {
         // }
@@ -25,6 +34,7 @@ macro_rules! enum_type {
     };
 }
 pub(crate) use enum_type;
+// pub(crate) use paste::paste;
 
 // enum_type! {
 //     Style {

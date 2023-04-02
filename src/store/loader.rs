@@ -65,7 +65,7 @@ fn proc(ctx: &mut ProcCtx, rec: &optionsdx::OdxRecord) {
 
     if let (Some(c_bid), Some(c_ask)) = (rec.c_bid, rec.c_ask) {
         let (call_size_bid, call_size_ask) = optionsdx::parse_size(rec.c_size);
-        let call_opt: Opt<Call> = Opt::new(xpir, strike);
+        let call_opt: Opt<Call> = Opt::new(xpir, to_strike(strike));
         let call_meta = Meta { delta:rec.c_delta, gamma:rec.c_gamma, vega:rec.c_vega, theta:rec.c_theta, rho:rec.c_rho, iv:rec.c_iv, volume:rec.c_volume };
         let call_quote = Quote { bisk:BidAsk { bid:c_bid, ask:c_ask }, last:rec.c_last, size_bid:call_size_bid, size_ask:call_size_ask, meta:call_meta };
         let call_optquote: OptQuote<Call> = OptQuote { opt:call_opt, quote:call_quote };
@@ -75,7 +75,7 @@ fn proc(ctx: &mut ProcCtx, rec: &optionsdx::OdxRecord) {
 
     if let (Some(p_bid), Some(p_ask)) = (rec.p_bid, rec.p_ask) {
         let (put_size_bid, put_size_ask) = optionsdx::parse_size(rec.p_size);
-        let put_opt: Opt<Call> = Opt::new(xpir, strike);
+        let put_opt: Opt<Call> = Opt::new(xpir, to_strike(strike));
         let put_meta = Meta { delta:rec.p_delta, gamma:rec.p_gamma, vega:rec.p_vega, theta:rec.p_theta, rho:rec.p_rho, iv:rec.p_iv, volume:rec.p_volume };
         let put_quote = Quote { bisk:BidAsk { bid:p_bid, ask:p_ask }, last:rec.p_last, size_bid:put_size_bid, size_ask:put_size_ask, meta:put_meta };
         let put_optquote: OptQuote<Call> = OptQuote { opt:put_opt, quote:put_quote };

@@ -8,6 +8,8 @@ type NaiveDateInternal = i32;
 
 pub type Pred1<T> = fn(T) -> bool;
 
+pub type QuantityType = f32;
+
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Readable, Writable)]
 pub struct Timestamp(pub i64);
 
@@ -51,6 +53,11 @@ impl ExpirDate {
         ExpirDate(unsafe { transmute::<NaiveDate,NaiveDateInternal>(d) })
     }
 
+    pub fn parse(s:&str) -> Result<Self,chrono::ParseError> {
+        let nd = NaiveDate::parse_from_str(s, "%Y-%m-%d")?;
+        return Ok(Self::from_naive(nd));
+    }
+
     pub fn to_naive(&self) -> &NaiveDate {
         unsafe { &transmute::<&NaiveDateInternal,&NaiveDate>(&self.0) }
     }
@@ -66,20 +73,15 @@ impl fmt::Debug for ExpirDate {
     }
 }
 
-// impl Deref for ExpirDate {
-//     type Target = NaiveDate;
-//     fn deref(&self) -> &Self::Target {
-//         unsafe { &transmute::<&NaiveDateInternal,&NaiveDate>(&self.0) }
+// impl<'a, C:Context> Readable<'a,C> for ExpirDate {
+//     #[inline]
+//     fn read_from< R:Reader<'a, C>>(reader:&mut R) -> Result<Self, C::Error> {
+//         Ok(ExpirDate(reader.read_value()?))
 //     }
-// }
 
-// impl<T> AsRef<T> for ExpirDate
-// where
-//     T: ?Sized,
-//     <ExpirDate as Deref>::Target: AsRef<T>,
-// {
-//     fn as_ref(&self) -> &T {
-//         self.deref().as_ref()
+//     #[inline]
+//     fn minimum_bytes_needed() -> usize {
+//         4
 //     }
 // }
 

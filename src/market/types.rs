@@ -1,3 +1,5 @@
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::marker::PhantomData;
 use speedy::{Readable, Writable, Context, Writer, Reader};
 use crate::general::*;
@@ -20,7 +22,7 @@ pub type PriceStore = f32;
 // pub struct PriceExt(pub f32);
 pub type PriceExt = f32;
 
-pub type Tennies = i32; // Tenths of pennies
+pub type Tennies = u32; // Tenths of pennies
 pub type StrikeType = Tennies;
 // pub struct StrikeType(Tennies);
 
@@ -57,22 +59,25 @@ impl Switch for Put {
     }
 }
 
-pub trait Side {}
-#[derive(Readable,Writable)]
-pub struct Long;
-#[derive(Readable,Writable)]
-pub struct Short;
-impl Side for Long {}
-impl Side for Short {}
+enum_type! {
+    Side {
+        fn code() -> char;
+    }
+    Long {
+        fn code() -> char { 'l' }
+    }
+    Short {
+        fn code() -> char { 's' }
+    }
+}
 
-// #[derive(Readable, Writable)]
 pub struct Opt<S:Style> {
     pub _style: PhantomData<*const S>,
     pub expir: ExpirDate,
-    pub strike: PriceCalc,
+    pub strike: StrikeType,
 }
 impl<S:Style> Opt<S> {
-    pub fn new(expir: ExpirDate, strike: PriceCalc) -> Self {
+    pub fn new(expir: ExpirDate, strike: StrikeType) -> Self {
         Opt {
             _style: PhantomData,
             expir: expir,
@@ -80,9 +85,11 @@ impl<S:Style> Opt<S> {
         }
     }
 }
+
+// p100.5@2023-03-22
 impl<S:Style> std::fmt::Display for Opt<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {} {}", S::code(), self.expir, self.strike)
+        write!(f, "{}{}@{}", S::code(), self.strike, self.expir)
     }
 }
 impl<S:Style> std::fmt::Debug for Opt<S> {
@@ -91,10 +98,49 @@ impl<S:Style> std::fmt::Debug for Opt<S> {
     }
 }
 
-impl<C:Context> Writable<C> for Opt<Call> {
+lazy_static! {
+    static ref RE_OPT: Regex = Regex::new(r"([cp])([0-9.]+)@?(\d\d|\d{4}-\d\d-\d\d)?").unwrap();
+}
+
+pub fn parse_opt(s: &str, xpirs:Option<Vec<ExpirDate>>) -> Result<StyleEnum<Opt<Call>,Opt<Put>>, anyhow::Error> {
+    let captures = RE_OPT.captures(s).unwrap_or_else(|| panic!("Could not parse Opt: {s}"));
+    let style_code = captures[1].chars().next().unwrap();
+    println!("caps: {:?}", captures);
+    let strike:StrikeType = to_strike(captures[2].parse()?);
+    println!("strike: {strike}");
+    let str_xpir = captures.get(3).map_or("1", |x| x.as_str());
+    println!("Checking {str_xpir}");
+    let xpir = if str_xpir.len() <= 2 {
+        println!("Matching {str_xpir}");
+        match xpirs {
+            Some(xs) => {
+                let xpr:usize = str_xpir.parse().unwrap();
+                xs[xpr-1]
+            },
+            None => return Err(anyhow::anyhow!("Xpir num but no xpirs {}", str_xpir)),
+        }
+    } else {
+        println!("Parsing {str_xpir}");
+        ExpirDate::parse(str_xpir).unwrap()
+    };
+
+    return Ok(make_opt(style_code, xpir, strike));
+}
+
+pub type EnumStyleOpt = StyleEnum<Opt<Call>,Opt<Put>>;
+
+pub fn make_opt(style_code:char, xpir:ExpirDate, strike:StrikeType) -> EnumStyleOpt {
+    if style_code == Call::code() {
+        return StyleEnum::Call(Opt::new(xpir, strike))
+    } else {
+        return StyleEnum::Put(Opt::new(xpir, strike))
+    }
+}
+
+impl<C:Context,S:Style> Writable<C> for Opt<S> {
     #[inline]
     fn write_to<W:?Sized+Writer<C>>(&self, writer:&mut W) -> Result<(),C::Error> {
-        // Call::code().write_to(writer)?;
+        // S::code().write_to(writer)?;
         self.expir.write_to(writer)?;
         self.strike.write_to(writer)?;
         return Ok(());
@@ -102,34 +148,14 @@ impl<C:Context> Writable<C> for Opt<Call> {
 
     #[inline]
     fn bytes_needed(&self) -> Result<usize, C::Error> {
-        // TODO
-        Ok(1 + 4 + 4)
-        // Ok(1 + ExpirDate::minimum_bytes_needed() + PriceCalc::minimum_bytes_needed())
+        Ok(4 + 4) // Ok(ExpirDate::minimum_bytes_needed() + PriceCalc::minimum_bytes_needed())
     }
 }
 
-impl<C:Context> Writable<C> for Opt<Put> {
-    #[inline]
-    fn write_to<W:?Sized+Writer<C>>(&self, writer:&mut W) -> Result<(),C::Error> {
-        // Put::code().write_to(writer)?;
-        self.expir.write_to(writer)?;
-        self.strike.write_to(writer)?;
-        return Ok(());
-    }
-
-    #[inline]
-    fn bytes_needed(&self) -> Result<usize, C::Error> {
-        // TODO
-        Ok(4 + 4)
-        // Ok(1 + ExpirDate::minimum_bytes_needed() + PriceCalc::minimum_bytes_needed())
-    }
-}
-
-// TODO
-// impl<C:Context, S:Style+Writable<C>> Writable<C> for Opt<S> {
+// impl<C:Context> Writable<C> for Opt<Call> {
 //     #[inline]
 //     fn write_to<W:?Sized+Writer<C>>(&self, writer:&mut W) -> Result<(),C::Error> {
-//         S::code().write_to(writer);
+//         // Call::code().write_to(writer)?;
 //         self.expir.write_to(writer)?;
 //         self.strike.write_to(writer)?;
 //         return Ok(());
@@ -137,13 +163,26 @@ impl<C:Context> Writable<C> for Opt<Put> {
 
 //     #[inline]
 //     fn bytes_needed(&self) -> Result<usize, C::Error> {
-//         // TODO
-//         Ok(1 + 4 + 4)
-//         // Ok(1 + ExpirDate::minimum_bytes_needed() + PriceCalc::minimum_bytes_needed())
+//         Ok(ExpirDate::minimum_bytes_needed() + PriceCalc::minimum_bytes_needed())
 //     }
 // }
 
-impl<'a,C:Context> Readable<'a,C> for Opt<Call> {
+// impl<C:Context> Writable<C> for Opt<Put> {
+//     #[inline]
+//     fn write_to<W:?Sized+Writer<C>>(&self, writer:&mut W) -> Result<(),C::Error> {
+//         // Put::code().write_to(writer)?;
+//         self.expir.write_to(writer)?;
+//         self.strike.write_to(writer)?;
+//         return Ok(());
+//     }
+
+//     #[inline]
+//     fn bytes_needed(&self) -> Result<usize, C::Error> {
+//         Ok(ExpirDate::minimum_bytes_needed() + PriceCalc::minimum_bytes_needed())
+//     }
+// }
+
+impl<'a,C:Context,S:Style> Readable<'a,C> for Opt<S> {
     #[inline]
     fn read_from<R:Reader<'a,C>>(reader:&mut R) -> Result<Self,C::Error> {
         // let code = reader.read_value()?;
@@ -154,28 +193,11 @@ impl<'a,C:Context> Readable<'a,C> for Opt<Call> {
 
     #[inline]
     fn minimum_bytes_needed() -> usize {
-        // TODO
-        4 + 4
+        4 + 4 // ExpirDate::minimum_bytes_needed() + PriceCalc::minimum_bytes_needed()
     }
 }
 
-impl<'a,C:Context> Readable<'a,C> for Opt<Put> {
-    #[inline]
-    fn read_from<R:Reader<'a,C>>(reader:&mut R) -> Result<Self,C::Error> {
-        // let code = reader.read_value()?;
-        let xpir = reader.read_value()?;
-        let strike = reader.read_value()?;
-        Ok(Opt::new(xpir, strike))
-    }
-
-    #[inline]
-    fn minimum_bytes_needed() -> usize {
-        // TODO
-        4 + 4
-    }
-}
-
-// impl<'a,C:Context, S:Style+Readable<'a,C>> Readable<'a,C> for Opt<S> {
+// impl<'a,C:Context> Readable<'a,C> for Opt<Call> {
 //     #[inline]
 //     fn read_from<R:Reader<'a,C>>(reader:&mut R) -> Result<Self,C::Error> {
 //         // let code = reader.read_value()?;
@@ -187,7 +209,23 @@ impl<'a,C:Context> Readable<'a,C> for Opt<Put> {
 //     #[inline]
 //     fn minimum_bytes_needed() -> usize {
 //         // TODO
-//         1 + 4 + 4
+//         4 + 4
+//     }
+// }
+
+// impl<'a,C:Context> Readable<'a,C> for Opt<Put> {
+//     #[inline]
+//     fn read_from<R:Reader<'a,C>>(reader:&mut R) -> Result<Self,C::Error> {
+//         // let code = reader.read_value()?;
+//         let xpir = reader.read_value()?;
+//         let strike = reader.read_value()?;
+//         Ok(Opt::new(xpir, strike))
+//     }
+
+//     #[inline]
+//     fn minimum_bytes_needed() -> usize {
+//         // TODO
+//         4 + 4
 //     }
 // }
 
