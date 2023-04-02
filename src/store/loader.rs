@@ -12,18 +12,20 @@ use crate::store::optionsdx;
 use crate::market::types::*;
 use crate::store::paths::*;
 
-pub fn walk() {
+pub fn walk(filter:Option<fn((u16,u8))->bool>) {
     info!("Walking paths");
     let iter = WalkDir::new(PATH_ODX).into_iter().filter_map(valid_path);
     for entry in iter {
         let path = entry.path();
         let name = path.file_name().expect("invalid path").to_str().expect("invalid path encoding");
-        let (year, month) = parse_ym(name);
-        println!("Processing year {year}, month {month}");
-        info!("Processing year {year}, month {month}");
-        let mut ctx = make_ctx(year, month);
-        optionsdx::load(path, proc, &mut ctx);
-        // break;
+        let ym = parse_ym(name);
+        let (year, month) = ym;
+        if filter.map_or(true, |f| f(ym)) {
+            println!("Processing year {year}, month {month}");
+            info!("Processing year {year}, month {month}");
+            let mut ctx = make_ctx(year, month);
+            optionsdx::load(path, proc, &mut ctx);
+        }
     }
 }
 

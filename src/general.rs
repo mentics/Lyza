@@ -24,8 +24,9 @@ impl Timestamp {
 
 impl fmt::Display for Timestamp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let millis = NaiveDateTime::from_timestamp_millis(self.0).unwrap();
-        write!(f, "{}", millis)
+        let ndt = NaiveDateTime::from_timestamp_millis(self.0)
+                .expect(format!("Could not get ndt for {}", self.0).as_str()); // TODO: optimize
+        write!(f, "{}", ndt)
     }
 }
 impl fmt::Debug for Timestamp {

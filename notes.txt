@@ -23,10 +23,9 @@ backtest(&chall, &range_m1);
 
 /////////////////////////
 
-store::loader::walk();
-
-// let hd201601 = store::histdata::load_month(2016, 1);
-let hdall = store::histdata::load_all();
+let filt:Box<fn((u16,u8)) -> bool> = Box::new(|(y, m)| y == 2022 && m == 1);
+store::loader::walk(Some(*filt));
+let hdall = store::histdata::load_all(Some(*filt));
 let chall:ChainsAll = store::histdata::make_chall(&hdall);
 store::histdata::save_chall(&chall, "all");
 

@@ -4,7 +4,7 @@ fn main() -> Result<(), anyhow::Error> {
     crate::lyza::setup_logging()?;
 
     // lyza::store::loader::walk();
-    let hdall = store::histdata::load_all();
+    let hdall = store::histdata::load_all(None);
     let chall:ChainsAll = store::histdata::make_chall(&hdall);
     store::histdata::save_chall(&chall, "all");
 

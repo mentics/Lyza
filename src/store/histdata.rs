@@ -70,7 +70,7 @@ fn parse_rkyv_ym(s: &str) -> (u16, u8) {
     return (year, month);
 }
 
-pub fn load_all() -> HistData {
+pub fn load_all(filter:Option<fn((u16,u8))->bool>) -> HistData {
     println!("Loading all HistData rkyvs");
     let paths = std::fs::read_dir(PATH_RKYV).unwrap();
     let mut yms: Vec<(u16,u8)> = Vec::new();
@@ -78,7 +78,10 @@ pub fn load_all() -> HistData {
         let name = entry.unwrap().file_name();
         let s = name.to_str().unwrap();
         if s.len() > 4 {
-            yms.push(parse_rkyv_ym(s));
+            let ym = parse_rkyv_ym(s);
+            if filter.map_or(true, |f| f(ym)) {
+                yms.push(ym);
+            }
         }
     }
     yms.sort_unstable();
@@ -141,9 +144,9 @@ pub fn load_paths(
             calls_path:&PathBuf, puts_path:&PathBuf, unders_path:&PathBuf) {
     let mut buf = [0u8; UNDER_SIZE];
     load::<UnderType,UNDER_SIZE>(unders_v, &unders_path, &mut buf);
-    let mut buf_opt = [0u8; OPT_SIZE];
-    load::<CallType,OPT_SIZE>(calls_v, &calls_path, &mut buf_opt);
-    load::<PutType,OPT_SIZE>(puts_v, &puts_path, &mut buf_opt);
+    // let mut buf_opt = [0u8; OPT_SIZE];
+    // load::<CallType,OPT_SIZE>(calls_v, &calls_path, &mut buf_opt);
+    // load::<PutType,OPT_SIZE>(puts_v, &puts_path, &mut buf_opt);
 }
 
 fn load<'a, T:Readable<'a,LittleEndian>+std::fmt::Debug, const N: usize>(
@@ -156,6 +159,8 @@ fn load<'a, T:Readable<'a,LittleEndian>+std::fmt::Debug, const N: usize>(
         match reader.read_exact(buf) {
             Ok(()) => {
                 let x = T::read_from_buffer_copying_data(buf).expect("couldn't deserialize");
+                println!("here?");
+                println!("Pushing {:?}", x);
                 v.push(x);
             },
             Err(err) => match err.kind() {

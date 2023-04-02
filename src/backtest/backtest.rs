@@ -30,7 +30,6 @@ fn handle_ts<T:Chat>(ts:&Timestamp, _chat:&T) {
     println!("{}", ts);
 }
 
-
 // fn handle_ts<T>(ts:&Timestamp, chat:&T)
 //     where T:Chall,
 //         <T as Chall>::R: Chat {
