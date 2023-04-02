@@ -13,7 +13,13 @@ pub trait Chall {
         self.run(|_| true, f)
     }
     fn run(&self, pred:fn(&Timestamp) -> bool, f:fn(&Timestamp, &Self::R) -> ());
-    fn run_range(&self, rang:Range<Timestamp>, f:fn(&Timestamp, &Self::R) -> ());
+    // fn run_range(&self, rang:Range<Timestamp>, f:fn(&Timestamp, &Self::R) -> ());
+
+    // fn run_range<F, S>(&self, rang:Range<Timestamp>, f:F, s:&mut S)
+    // where F:Fn(&Timestamp, &Self::R, &mut S) -> ();
+
+    fn run_range<F>(&self, rang:Range<Timestamp>, f:F)
+    where F:FnMut(&Timestamp, &Self::R) -> ();
 }
 
 pub trait Chat {
@@ -93,7 +99,13 @@ impl Chall for ChainsAll {
         }
     }
 
-    fn run_range(&self, rang:Range<Timestamp>, f:fn(&Timestamp, &Self::R) -> ()) {
+    // fn run_range<F>(&self, rang:Range<Timestamp>, f:F)
+    // where F:Fn(&Timestamp, &Self::R) -> () {
+    // fn run_range<F, S>(&self, rang:Range<Timestamp>, f:F, s:&mut S)
+    // where F:Fn(&Timestamp, &Self::R, &mut S) -> () {
+
+    fn run_range<F>(&self, rang:Range<Timestamp>, mut f:F)
+    where F:FnMut(&Timestamp, &Self::R) -> () {
         self.chats.range(rang).for_each(|(ts,val)| f(ts, val));
     }
 }

@@ -104,6 +104,23 @@ fn proc(ctx: &mut ProcCtx, rec: &optionsdx::OdxRecord) {
     }
 }
 
+use std::io::Cursor;
+use speedy::*;
+pub fn test_write() {
+    let val:(Timestamp,PriceCalc) = (Timestamp(17), 13.3);
+    let mut buf:[u8; 12] = [0; 12];
+    val.write_to_buffer(&mut buf).unwrap();
+    println!("{:?}", buf);
+    let x1 = super::histdata::UnderType::read_from_buffer_copying_data(&buf).unwrap();
+    println!("{:?}", x1);
+    let mut c:Cursor<Vec<u8>> = Cursor::new(Vec::with_capacity(16));
+    x1.write_to_stream(&mut c).unwrap();
+    println!("{:?}", c);
+    c.set_position(0);
+    let x2 = super::histdata::UnderType::read_from_stream_buffered(&mut c).unwrap();
+    println!("{:?}", x2);
+}
+
 lazy_static! {
     static ref RE_PATH: Regex = Regex::new(r"spy_15x_(\d{4})(\d{2})\.txt").unwrap();
 }

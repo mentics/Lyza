@@ -12,7 +12,8 @@ use market::chaintypes::*;
 use std::ops::Range;
 use backtest::backtest::backtest;
 
-let chall:ChainsAll = store::histdata::load_chall("all");
+//let chall:ChainsAll = store::histdata::load_chall("all");
+let chall:ChainsAll = store::histdata::load_chall("m1");
 
 let range_m1:Range<Timestamp> = (Timestamp::from_ymd(2022, 1, 1))..(Timestamp::from_ymd(2022, 2, 1));
 let range_y4:Range<Timestamp> = (Timestamp::from_ymd(2019, 1, 1))..(Timestamp::from_ymd(2022, 10, 1));
@@ -24,10 +25,11 @@ backtest(&chall, &range_m1);
 /////////////////////////
 
 let filt:Box<fn((u16,u8)) -> bool> = Box::new(|(y, m)| y == 2022 && m == 1);
-store::loader::walk(Some(*filt));
+//store::loader::walk(Some(*filt));
 let hdall = store::histdata::load_all(Some(*filt));
 let chall:ChainsAll = store::histdata::make_chall(&hdall);
 store::histdata::save_chall(&chall, "all");
+store::histdata::save_chall(&chall, "m1");
 
 ////////////////////
 

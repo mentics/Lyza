@@ -1,5 +1,5 @@
 use regex::Regex;
-use speedy::{Writable, Readable, LittleEndian};
+use speedy::{Writable, Readable, LittleEndian, Endianness};
 use std::fs::File;
 use std::io::{BufReader, Read, ErrorKind};
 use std::path::PathBuf;
@@ -49,12 +49,16 @@ fn path_chall(suffix:&str) -> String {
     format!("{PATH_DB}chall-{suffix}.rkyv")
 }
 
-type UnderType = (Timestamp, PriceCalc);
-type CallType = (Timestamp, OptQuote<Call>);
-type PutType = (Timestamp, OptQuote<Put>);
+pub type UnderType = (Timestamp, PriceCalc);
+pub type CallType = (Timestamp, OptQuote<Call>);
+pub type PutType = (Timestamp, OptQuote<Put>);
 
-const UNDER_SIZE: usize = std::mem::size_of::<UnderType>();
-const OPT_SIZE: usize = std::mem::size_of::<CallType>();
+// std::mem::size_of::<UnderType>(); <- doesn't work because aligning
+pub const UNDER_SIZE: usize = 12;
+pub const OPT_SIZE: usize = 64;
+
+pub fn under_size() -> usize { <UnderType as Readable<Endianness>>::minimum_bytes_needed() }
+pub fn opt_size() -> usize { <CallType as Readable<Endianness>>::minimum_bytes_needed() }
 
 lazy_static! {
     static ref RE_RKYV: Regex = Regex::new(r"(\d{4})-(\d{2})").unwrap();
@@ -144,9 +148,9 @@ pub fn load_paths(
             calls_path:&PathBuf, puts_path:&PathBuf, unders_path:&PathBuf) {
     let mut buf = [0u8; UNDER_SIZE];
     load::<UnderType,UNDER_SIZE>(unders_v, &unders_path, &mut buf);
-    // let mut buf_opt = [0u8; OPT_SIZE];
-    // load::<CallType,OPT_SIZE>(calls_v, &calls_path, &mut buf_opt);
-    // load::<PutType,OPT_SIZE>(puts_v, &puts_path, &mut buf_opt);
+    let mut buf_opt = [0u8; OPT_SIZE];
+    load::<CallType,OPT_SIZE>(calls_v, &calls_path, &mut buf_opt);
+    load::<PutType,OPT_SIZE>(puts_v, &puts_path, &mut buf_opt);
 }
 
 fn load<'a, T:Readable<'a,LittleEndian>+std::fmt::Debug, const N: usize>(
@@ -159,14 +163,14 @@ fn load<'a, T:Readable<'a,LittleEndian>+std::fmt::Debug, const N: usize>(
         match reader.read_exact(buf) {
             Ok(()) => {
                 let x = T::read_from_buffer_copying_data(buf).expect("couldn't deserialize");
-                println!("here?");
-                println!("Pushing {:?}", x);
+                // println!("here?");
+                // println!("Pushing {:?}", x);
                 v.push(x);
             },
             Err(err) => match err.kind() {
-                    ErrorKind::UnexpectedEof => break,
-                    _ => panic!("Error deserializing histdata: {:?}", err)
-                }
+                ErrorKind::UnexpectedEof => break,
+                _ => panic!("Error deserializing histdata: {:?}", err)
+            }
         }
         // // match T::read_from_stream_unbuffered(&file) {
         // match T::read_from_buffer_copying_data(&buf) {

@@ -105,13 +105,13 @@ lazy_static! {
 pub fn parse_opt(s: &str, xpirs:Option<Vec<ExpirDate>>) -> Result<StyleEnum<Opt<Call>,Opt<Put>>, anyhow::Error> {
     let captures = RE_OPT.captures(s).unwrap_or_else(|| panic!("Could not parse Opt: {s}"));
     let style_code = captures[1].chars().next().unwrap();
-    println!("caps: {:?}", captures);
+    // println!("caps: {:?}", captures);
     let strike:StrikeType = to_strike(captures[2].parse()?);
-    println!("strike: {strike}");
+    // println!("strike: {strike}");
     let str_xpir = captures.get(3).map_or("1", |x| x.as_str());
-    println!("Checking {str_xpir}");
+    // println!("Checking {str_xpir}");
     let xpir = if str_xpir.len() <= 2 {
-        println!("Matching {str_xpir}");
+        // println!("Matching {str_xpir}");
         match xpirs {
             Some(xs) => {
                 let xpr:usize = str_xpir.parse().unwrap();
@@ -120,7 +120,7 @@ pub fn parse_opt(s: &str, xpirs:Option<Vec<ExpirDate>>) -> Result<StyleEnum<Opt<
             None => return Err(anyhow::anyhow!("Xpir num but no xpirs {}", str_xpir)),
         }
     } else {
-        println!("Parsing {str_xpir}");
+        // println!("Parsing {str_xpir}");
         ExpirDate::parse(str_xpir).unwrap()
     };
 
