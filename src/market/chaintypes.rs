@@ -7,19 +7,17 @@ use crate::market::types::*;
 
 pub trait Chall {
     type R:Chat;
+    // type Iter<'a>:Iterator<Item = (&'a Timestamp, &'a Self::R)> where <Self as Chall>::R: 'a;
+    // type Iter<'a>:Iterator<Item = (&'a Timestamp, &'a Self::R)> where <Self as Chall>::R: 'a, Self: 'a;
+    type Iter<'a>:Iterator<Item = (&'a Timestamp, &'a Self::R)> where Self: 'a;
+
     fn tss_all(&self) -> btree_map::Keys<'_, general::Timestamp, ChainAt>;
     fn at(&self, ts:&Timestamp) -> Option<&Self::R>;
-    fn run_all(&self, f:fn(&Timestamp, &Self::R) -> ()) {
-        self.run(|_| true, f)
-    }
-    fn run(&self, pred:fn(&Timestamp) -> bool, f:fn(&Timestamp, &Self::R) -> ());
-    // fn run_range(&self, rang:Range<Timestamp>, f:fn(&Timestamp, &Self::R) -> ());
-
-    // fn run_range<F, S>(&self, rang:Range<Timestamp>, f:F, s:&mut S)
-    // where F:Fn(&Timestamp, &Self::R, &mut S) -> ();
-
-    fn run_range<F>(&self, rang:Range<Timestamp>, f:F)
-    where F:FnMut(&Timestamp, &Self::R) -> ();
+    fn range<'a>(&'a self, rang:&Range<Timestamp>) -> Self::Iter<'a>;
+    // fn run_all(&self, f:fn(&Timestamp, &Self::R) -> ()) {
+    //     self.run(|_| true, f)
+    // }
+    // fn run(&self, pred:fn(&Timestamp) -> bool, f:fn(&Timestamp, &Self::R) -> ());
 }
 
 pub trait Chat {
@@ -77,6 +75,7 @@ impl ChainsAll {
 
 impl Chall for ChainsAll {
     type R = ChainAt;
+    type Iter<'a> = btree_map::Range<'a, Timestamp, ChainAt>;
 
     fn tss_all(&self) -> btree_map::Keys<'_, general::Timestamp, ChainAt> {
         self.chats.keys()
@@ -86,28 +85,22 @@ impl Chall for ChainsAll {
         self.chats.get(&ts)
     }
 
-    fn run<'a>(&'a self, pred:Pred1<&'a Timestamp>, f:fn(&'a Timestamp, &'a Self::R) -> ()) {
-        let mut i = 0;
-        for (ts, val) in self.chats.iter() {
-            if pred(ts) {
-                f(ts, val);
-            }
-            i += 1;
-            if i > 10 {
-                break;
-            }
-        }
+    fn range<'a>(&'a self, rang:&Range<Timestamp>) -> Self::Iter<'a> {
+        self.chats.range(rang.clone()) // TODO: have to move/copy?
     }
 
-    // fn run_range<F>(&self, rang:Range<Timestamp>, f:F)
-    // where F:Fn(&Timestamp, &Self::R) -> () {
-    // fn run_range<F, S>(&self, rang:Range<Timestamp>, f:F, s:&mut S)
-    // where F:Fn(&Timestamp, &Self::R, &mut S) -> () {
-
-    fn run_range<F>(&self, rang:Range<Timestamp>, mut f:F)
-    where F:FnMut(&Timestamp, &Self::R) -> () {
-        self.chats.range(rang).for_each(|(ts,val)| f(ts, val));
-    }
+    // fn run<'a>(&'a self, pred:Pred1<&'a Timestamp>, f:fn(&'a Timestamp, &'a Self::R) -> ()) {
+    //     let mut i = 0;
+    //     for (ts, val) in self.chats.iter() {
+    //         if pred(ts) {
+    //             f(ts, val);
+    //         }
+    //         i += 1;
+    //         if i > 10 {
+    //             break;
+    //         }
+    //     }
+    // }
 }
 
 #[derive(Readable, Writable)]

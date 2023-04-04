@@ -2,6 +2,7 @@ pub mod store;
 pub mod market;
 pub mod backtest;
 pub mod general;
+pub mod test;
 mod macros;
 
 pub fn setup_logging() -> Result<(),anyhow::Error> {

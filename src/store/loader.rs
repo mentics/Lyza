@@ -57,7 +57,8 @@ struct ProcCtx {
 
 // fn proc(rec: &OdxRecord) {
 fn proc(ctx: &mut ProcCtx, rec: &optionsdx::OdxRecord) {
-    let ts = Timestamp (rec.quote_unixtime * 1000);
+    // let ts = Timestamp (rec.quote_unixtime * 1000);
+    let ts = Timestamp::from_timestamp(rec.quote_unixtime);
     let under = rec.underlying_last;
     let xpir = ExpirDate::from_naive(chrono::naive::NaiveDateTime::from_timestamp_millis(rec.expire_unix * 1000).unwrap().date());
     // let strike = PriceCalc(rec.strike);
@@ -107,7 +108,7 @@ fn proc(ctx: &mut ProcCtx, rec: &optionsdx::OdxRecord) {
 use std::io::Cursor;
 use speedy::*;
 pub fn test_write() {
-    let val:(Timestamp,PriceCalc) = (Timestamp(17), 13.3);
+    let val:(Timestamp,PriceCalc) = (Timestamp::from_ymd(2019,2,17), 13.3);
     let mut buf:[u8; 12] = [0; 12];
     val.write_to_buffer(&mut buf).unwrap();
     println!("{:?}", buf);

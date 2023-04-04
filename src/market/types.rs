@@ -152,36 +152,6 @@ impl<C:Context,S:Style> Writable<C> for Opt<S> {
     }
 }
 
-// impl<C:Context> Writable<C> for Opt<Call> {
-//     #[inline]
-//     fn write_to<W:?Sized+Writer<C>>(&self, writer:&mut W) -> Result<(),C::Error> {
-//         // Call::code().write_to(writer)?;
-//         self.expir.write_to(writer)?;
-//         self.strike.write_to(writer)?;
-//         return Ok(());
-//     }
-
-//     #[inline]
-//     fn bytes_needed(&self) -> Result<usize, C::Error> {
-//         Ok(ExpirDate::minimum_bytes_needed() + PriceCalc::minimum_bytes_needed())
-//     }
-// }
-
-// impl<C:Context> Writable<C> for Opt<Put> {
-//     #[inline]
-//     fn write_to<W:?Sized+Writer<C>>(&self, writer:&mut W) -> Result<(),C::Error> {
-//         // Put::code().write_to(writer)?;
-//         self.expir.write_to(writer)?;
-//         self.strike.write_to(writer)?;
-//         return Ok(());
-//     }
-
-//     #[inline]
-//     fn bytes_needed(&self) -> Result<usize, C::Error> {
-//         Ok(ExpirDate::minimum_bytes_needed() + PriceCalc::minimum_bytes_needed())
-//     }
-// }
-
 impl<'a,C:Context,S:Style> Readable<'a,C> for Opt<S> {
     #[inline]
     fn read_from<R:Reader<'a,C>>(reader:&mut R) -> Result<Self,C::Error> {
@@ -196,38 +166,6 @@ impl<'a,C:Context,S:Style> Readable<'a,C> for Opt<S> {
         4 + 4 // ExpirDate::minimum_bytes_needed() + PriceCalc::minimum_bytes_needed()
     }
 }
-
-// impl<'a,C:Context> Readable<'a,C> for Opt<Call> {
-//     #[inline]
-//     fn read_from<R:Reader<'a,C>>(reader:&mut R) -> Result<Self,C::Error> {
-//         // let code = reader.read_value()?;
-//         let xpir = reader.read_value()?;
-//         let strike = reader.read_value()?;
-//         Ok(Opt::new(xpir, strike))
-//     }
-
-//     #[inline]
-//     fn minimum_bytes_needed() -> usize {
-//         // TODO
-//         4 + 4
-//     }
-// }
-
-// impl<'a,C:Context> Readable<'a,C> for Opt<Put> {
-//     #[inline]
-//     fn read_from<R:Reader<'a,C>>(reader:&mut R) -> Result<Self,C::Error> {
-//         // let code = reader.read_value()?;
-//         let xpir = reader.read_value()?;
-//         let strike = reader.read_value()?;
-//         Ok(Opt::new(xpir, strike))
-//     }
-
-//     #[inline]
-//     fn minimum_bytes_needed() -> usize {
-//         // TODO
-//         4 + 4
-//     }
-// }
 
 #[derive(Copy, Clone, Readable, Writable, Debug)]
 pub struct BidAsk {
